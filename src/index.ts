@@ -1,11 +1,11 @@
 import bodyParser from "body-parser";
 import express from "express";
-import pg from "pg";
+import { WebhookEvent } from "@line/bot-sdk";
+import * as dotenv from "dotenv";
+import { handleIncomingMessage } from "./handleIncomingMessage";
 
-// Connect to the database using the DATABASE_URL environment
-//   variable injected by Railway
-const pool = new pg.Pool();
-
+// Setup
+dotenv.config();
 const app = express();
 const port = process.env.PORT || 3333;
 
@@ -13,9 +13,17 @@ app.use(bodyParser.json());
 app.use(bodyParser.raw({ type: "application/vnd.custom-type" }));
 app.use(bodyParser.text({ type: "text/html" }));
 
-app.get("/", async (req, res) => {
-  const { rows } = await pool.query("SELECT NOW()");
-  res.send(`Hello, World! The time from the DB is ${rows[0].now}`);
+// ------
+
+app.post("/webhook", async (req, res) => {
+  const events: WebhookEvent[] = req.body.events;
+
+  for (const event of events) {
+    if (event.type === "message") {
+      handleIncomingMessage(event);
+    }
+  }
+  res.sendStatus(200);
 });
 
 app.listen(port, () => {
