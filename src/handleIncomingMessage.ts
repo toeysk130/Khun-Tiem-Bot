@@ -4,15 +4,27 @@ import * as dotenv from "dotenv";
 import { validateLeaveRequest } from "./validateLeaveReq";
 import {
   addNewLeaveRequest,
+  checkIfIdExist,
+  checkIfMyIdExist,
   getMemberDetails,
   pushMsg,
   registerNewMember,
+  showListThisWeek,
   showListToday,
+  showMyList,
   showTable,
   showWaitApprove,
   updateApproveFlag,
+  updateKeyStatus,
 } from "./lineAPI";
-import { tableLists, validReportTypes } from "./config";
+import {
+  daysColor,
+  tableLists,
+  validKeyStatus,
+  validReportTypes,
+} from "./config";
+import { getCurrentDateString, getCurrentWeekDate } from "./utils";
+import { pushMessage } from "./pushMessage";
 
 dotenv.config();
 const pool = new pg.Pool();
@@ -48,11 +60,6 @@ export async function handleIncomingMessage(event: WebhookEvent) {
     await registerNewMember(pool, client, replyToken, userId, userName);
   }
 
-  //   // TODO: remove
-  //   const isAdmin = member.is_admin;
-  //   if (!isAdmin) return;
-  //   //
-
   // Stop procesing if member not register yet
   if (!isMemberExist) return;
 
@@ -60,11 +67,12 @@ export async function handleIncomingMessage(event: WebhookEvent) {
     const replyMessage = `🤖 รายการคำสั่ง\
       \n👉สมัคร <ชื่อ>\
       \n👉แจ้งลา <ลาป่วย,ลากิจ,ลาพักร้อน,hh> <วันเริ่มลา 26JAN,26JAN-28JAN> <จำนวน 1วัน, 3วัน, ครึ่งเช้า, ครึ่งบ่าย> <key,nokey>\
-      \n👉แก้ไข <id> <status> <key,nokey> (⛔ Developing)\
-      \n👉รายงาน <วันนี้, วีคนี้, เดือนนี้> (⛔ Developing)\
+      \n👉อัปเดต <id> <key,nokey>\
+      \n👉รายงาน <ของฉัน, วันนี้, วีคนี้>\
       \n👉เตือน <approve>\
-      \n👉approve <ids เช่น approve 8 หรือ approve 3,4,8,10> (⛔ Only Admin)\
-      \n👉ตาราง <member, happy_hour, leave_schedule>\
+      \n👉ตาราง <member, leave_schedule>\
+      \n👉approve <id> (⛔ Only Admin)\
+      \n👉ลบ <id> (⛔ Only Admin) (⚠️ Developing)\
       `;
     await pushMsg(client, replyToken, replyMessage);
   }
@@ -84,7 +92,14 @@ export async function handleIncomingMessage(event: WebhookEvent) {
   // แจ้งลา <ประเภท [ลาป่วย,ลากิจ,ลาพักร้อน,hh]> <วันเริ่มลา [26JAN]> <จำนวน [1วัน, 3วัน, ครึ่งเช้า, ครึ่งบ่าย]> <key, nokey>
   else if (command == "แจ้งลา") {
     if (
-      !(await validateLeaveRequest(client, commandArr, commandLen, replyToken))
+      !(await validateLeaveRequest(
+        pool,
+        client,
+        member.name,
+        commandArr,
+        commandLen,
+        replyToken
+      ))
     )
       return;
 
@@ -109,14 +124,19 @@ export async function handleIncomingMessage(event: WebhookEvent) {
     const ids = option.split(",").map((item) => Number(item.trim()));
 
     // validate option
-    if (ids.length == 1)
-      // TODO: validate single approval
-      await updateApproveFlag(pool, client, replyToken, ids[0]);
+    if (ids.length == 1) {
+      const id = ids[0];
 
-    // TODO: validate multiple approvals
-    // TODO: Bulk Update
+      if (!(await checkIfIdExist(pool, id.toString()))) {
+        const replyMessage = `⛔ ไม่มี ID:${id} ในระบบ`;
+        await pushMsg(client, replyToken, replyMessage);
+        return;
+      }
+
+      await updateApproveFlag(pool, client, replyToken, id);
+    }
   }
-  //👉รายงาน <วันนี้, วีคนี้, เดือนนี้> (⛔ Developing)
+  //👉รายงาน <ของฉัน, วันนี้, วีคนี้, เดือนนี้> (⛔ Developing)
   else if (command == "รายงาน" && commandLen == 2) {
     const reportType = commandArr[1];
     // command validation
@@ -127,5 +147,104 @@ export async function handleIncomingMessage(event: WebhookEvent) {
     }
 
     if (reportType == "วันนี้") await showListToday(pool, client, replyToken);
+    else if (reportType == "ของฉัน")
+      await showMyList(pool, client, member.name, replyToken);
+    else if (reportType == "วีคนี้") {
+      const currentWeekDates = getCurrentWeekDate(
+        new Date(getCurrentDateString())
+      );
+      const currentWeekStartDate = currentWeekDates[0].date;
+      const currentWeekEndDate =
+        currentWeekDates[currentWeekDates.length - 1].date;
+
+      const leaveListThisWeeks = await showListThisWeek(
+        pool,
+        currentWeekStartDate,
+        currentWeekEndDate
+      );
+
+      // Initialize an object to accumulate members for each day
+      let dayMembersMap: { [key: string]: string[] } = {};
+
+      // Function to format date as DDMMM (e.g., 29JAN)
+      function formatDate(date: string): string {
+        const monthNames = [
+          "JAN",
+          "FEB",
+          "MAR",
+          "APR",
+          "MAY",
+          "JUN",
+          "JUL",
+          "AUG",
+          "SEP",
+          "OCT",
+          "NOV",
+          "DEC",
+        ];
+        const parts = date.split("-");
+        const day = parts[2];
+        const monthIndex = parseInt(parts[1], 10) - 1; // Month is 0-indexed in the array
+        const month = monthNames[monthIndex];
+        return `${day}${month}`;
+      }
+
+      // Prepare the result string with formatted dates
+      let resultString = "😶‍🌫️ รายงานการลา สัปดาห์นี้\n\n";
+
+      currentWeekDates.forEach((weekDate, index) => {
+        // Initialize members array for each day
+        dayMembersMap[weekDate.day] = [];
+
+        // Format date
+        const formattedDate = formatDate(weekDate.date);
+
+        // Populate members for each day
+        leaveListThisWeeks.forEach((leave) => {
+          if (
+            weekDate.date >= leave.leave_start_dt &&
+            weekDate.date <= leave.leave_end_dt
+          ) {
+            dayMembersMap[weekDate.day].push(leave.member);
+          }
+        });
+
+        // Append to result string
+        resultString += `${daysColor[index]}${formattedDate}(${
+          weekDate.day
+        }) : ${dayMembersMap[weekDate.day].join(", ") || ""}\n`;
+      });
+
+      await pushMsg(client, replyToken, resultString);
+    }
+  }
+  //👉อัปเดต <id> <key,nokey>
+  else if (command == "อัปเดต" && commandLen == 3) {
+    const id = commandArr[1];
+    const status = commandArr[2];
+
+    // validation
+    if (!validKeyStatus.includes(status)) {
+      const replyMessage = `⚠️ ประเภทการคีย์ '${status}' ไม่มีในระบบ\
+      \n ตัวเลือกที่มี ${validKeyStatus.join(" ")}`;
+      await pushMsg(client, replyToken, replyMessage);
+      return;
+    }
+
+    if (!(await checkIfMyIdExist(pool, member.name, id))) {
+      const replyMessage = `⛔ ไม่มี ID:${id} ที่เป็นของ '${member.name}'`;
+      await pushMsg(client, replyToken, replyMessage);
+      return;
+    }
+
+    await updateKeyStatus(pool, client, replyToken, id, status);
+  } else if (command == "cron") {
+    // validate if not admin
+    if (member.is_admin == false) {
+      const replyMessage = "😡 ไม่ใช่ Admin ใช้งานไม่ได้!";
+      await pushMsg(client, replyToken, replyMessage);
+      return;
+    }
+    await pushMessage();
   }
 }

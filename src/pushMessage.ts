@@ -1,11 +1,15 @@
 import axios from "axios";
+import * as dotenv from "dotenv";
+import pg from "pg";
+import { getListToday, getWaitApprove } from "./lineAPI";
+
+// Setup
+dotenv.config();
+const pool = new pg.Pool();
 
 export async function pushMessage() {
-  // Replace with your Line API access token
-  const LINE_ACCESS_TOKEN = "";
-
-  // Replace with your Line Group ID
-  const GROUP_ID = "";
+  const LINE_ACCESS_TOKEN = process.env.CHANNEL_ACCESS_TOKEN || "";
+  const GROUP_ID = process.env.GROUP_ID || "";
 
   // Line Messaging API endpoint
   const LINE_API_URL = "https://api.line.me/v2/bot/message/push";
@@ -19,21 +23,51 @@ export async function pushMessage() {
     },
   });
 
+  const listToday = await getListToday(pool);
+
   // Define the message you want to send
-  const message = {
+  const message1 = {
     type: "text",
-    text: "Hello, Line Group!",
+    text: "☀️☀️ สวัสดียามเช้าที่สดใส ☀️☀️\n\n" + listToday,
   };
 
   // Create the payload for the request
-  const payload = {
+  const payload1 = {
     to: GROUP_ID,
-    messages: [message],
+    messages: [message1],
   };
 
   // Send the message to the Line Group
   axiosInstance
-    .post("", payload)
+    .post("", payload1)
+    .then((response) => {
+      console.log("Message sent successfully:", response.data);
+    })
+    .catch((error) => {
+      console.error("Error sending message:", error);
+    });
+
+  // =======================================
+  // =======================================
+  // =======================================
+
+  const waitApprove = await getWaitApprove(pool);
+
+  // Define the message you want to send
+  const message2 = {
+    type: "text",
+    text: waitApprove,
+  };
+
+  // Create the payload for the request
+  const payload2 = {
+    to: GROUP_ID,
+    messages: [message2],
+  };
+
+  // Send the message to the Line Group
+  axiosInstance
+    .post("", payload2)
     .then((response) => {
       console.log("Message sent successfully:", response.data);
     })

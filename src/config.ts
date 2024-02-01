@@ -1,4 +1,6 @@
-export const validReportTypes = ["วันนี้", "วีคนี้", "เดือนนี้"];
+export const validKeyStatus = ["key", "nokey"];
+
+export const validReportTypes = ["ของฉัน", "วันนี้", "วีคนี้", "เดือนนี้"];
 
 export const validLeaveTypes = ["ลาป่วย", "ลากิจ", "ลาพักร้อน", "hh"];
 
@@ -65,4 +67,6 @@ export const LeaveAmountMap: { [key: string]: number } = {
   ครึ่งบ่าย: 0.5,
 };
 
-export const validLeaveKeys = ["key", "nokey"];
+export const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+export const daysColor = ["🟡", "🟣", "🟢", "🟠", "🔵"];

@@ -1,15 +1,18 @@
 import { Client } from "@line/bot-sdk";
+import pg from "pg";
 import {
   monthAbbreviations,
+  validKeyStatus,
   validLeaveAmounts,
-  validLeaveKeys,
   validLeaveTypes,
   validMonths,
 } from "./config";
-import { pushMsg } from "./lineAPI";
+import { getIsLeaveDuplicate, pushMsg } from "./lineAPI";
 
 export async function validateLeaveRequest(
+  pool: pg.Pool,
   client: Client,
+  member: string,
   commandArr: string[],
   commandLen: number,
   replyToken: string
@@ -17,7 +20,10 @@ export async function validateLeaveRequest(
   // command validation
   if (commandLen != 5) {
     const replyMessage =
-      "⚠️ คำสั่งไม่ครบนะ\nวิธีใช้งาน: แจ้งลา <ลาป่วย,ลากิจ,ลาพักร้อน,hh> <วันที่เริ่มลา เช่น 26JAN หรือ 26JAN-28JAN> <จำนวน เช่น 1วัน, 3วัน, ครึ่งเช้า, ครึ่งบ่าย]> <key, nokey>\nตัวอย่าง: แจ้งลา ลาพักร้อน 28JAN 1วัน nokey";
+      "🙅 คำสั่งไม่ครบนะ\
+      \n👉🏻วิธีใช้งาน: แจ้งลา <ลาป่วย,ลากิจ,ลาพักร้อน,hh> <วันที่เริ่มลา เช่น 26JAN หรือ 26JAN-28JAN> <จำนวน เช่น 1วัน, 3วัน, ครึ่งเช้า, ครึ่งบ่าย> <key, nokey>\
+      \n👉🏻ตัวอย่าง: แจ้งลา ลาพักร้อน 28JAN 1วัน nokey\
+      \n👉🏻ตัวอย่าง: แจ้งลา ลาพักร้อน 30JAN-02FEB 4วัน nokey";
     await pushMsg(client, replyToken, replyMessage);
     return false;
   }
@@ -55,6 +61,20 @@ export async function validateLeaveRequest(
 
       if (!["1วัน", "ครึ่งเช้า", "ครึ่งบ่าย"].includes(leaveAmount)) {
         const replyMessage = `⚠️ จำนวนวันลา '${leaveAmount}' ไม่ถูกต้อง`;
+        await pushMsg(client, replyToken, replyMessage);
+        return false;
+      }
+
+      // Parse the date strings manually
+      const firstDay = parseInt(leaveStartDate.slice(0, 2), 10);
+      const monthAbbreviation = leaveStartDate.slice(2, 5);
+      const firstMonth = validMonths.indexOf(monthAbbreviation);
+      const firstYear = new Date().getUTCFullYear();
+      const firstDate = new Date(Date.UTC(firstYear, firstMonth, firstDay));
+      const dateString = firstDate.toISOString().split("T")[0]; // Output: '2024-02-02'
+
+      if (await getIsLeaveDuplicate(pool, member, dateString)) {
+        const replyMessage = `😤 วันที่ '${leaveStartDate}' เคยลาไปแล้ว..จะลาซ้ำไม่ได้`;
         await pushMsg(client, replyToken, replyMessage);
         return false;
       }
@@ -128,9 +148,9 @@ export async function validateLeaveRequest(
     return false;
   }
 
-  if (!validLeaveKeys.includes(leaveKey)) {
+  if (!validKeyStatus.includes(leaveKey)) {
     const replyMessage = `⚠️ ประเภทการคีย์ '${leaveKey}' ไม่มีในระบบ\
-          \n ตัวเลือกที่มี ${validLeaveKeys.join(" ")}`;
+          \n ตัวเลือกที่มี ${validKeyStatus.join(" ")}`;
     await pushMsg(client, replyToken, replyMessage);
     return false;
   }
