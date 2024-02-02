@@ -205,7 +205,9 @@ export async function handleIncomingMessage(event: WebhookEvent) {
             weekDate.date >= leave.leave_start_dt &&
             weekDate.date <= leave.leave_end_dt
           ) {
-            dayMembersMap[weekDate.day].push(leave.member);
+            dayMembersMap[weekDate.day].push(
+              leave.member + "(" + leave.leave_type + ")"
+            );
           }
         });
 
