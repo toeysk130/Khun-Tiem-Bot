@@ -23,7 +23,11 @@ import {
   validKeyStatus,
   validReportTypes,
 } from "./config";
-import { getCurrentDateString, getCurrentWeekDate } from "./utils";
+import {
+  getCurrentDateString,
+  getCurrentWeekDate,
+  getNextWeektDateString,
+} from "./utils";
 import { pushMessage } from "./pushMessage";
 
 dotenv.config();
@@ -149,10 +153,12 @@ export async function handleIncomingMessage(event: WebhookEvent) {
     if (reportType == "วันนี้") await showListToday(pool, client, replyToken);
     else if (reportType == "ของฉัน")
       await showMyList(pool, client, member.name, replyToken);
-    else if (reportType == "วีคนี้") {
-      const currentWeekDates = getCurrentWeekDate(
-        new Date(getCurrentDateString())
-      );
+    else if (reportType == "วีคนี้" || reportType == "วีคหน้า") {
+      const currentWeekDates =
+        reportType == "วีคนี้"
+          ? getCurrentWeekDate(new Date(getCurrentDateString()))
+          : getCurrentWeekDate(new Date(getNextWeektDateString()));
+
       const currentWeekStartDate = currentWeekDates[0].date;
       const currentWeekEndDate =
         currentWeekDates[currentWeekDates.length - 1].date;

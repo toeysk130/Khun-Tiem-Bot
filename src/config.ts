@@ -1,6 +1,12 @@
 export const validKeyStatus = ["key", "nokey"];
 
-export const validReportTypes = ["ของฉัน", "วันนี้", "วีคนี้", "เดือนนี้"];
+export const validReportTypes = [
+  "ของฉัน",
+  "วันนี้",
+  "วีคนี้",
+  "วีคหน้า",
+  "เดือนนี้",
+];
 
 export const validLeaveTypes = ["ลาป่วย", "ลากิจ", "ลาพักร้อน", "hh"];
 

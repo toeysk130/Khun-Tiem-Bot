@@ -47,6 +47,23 @@ export function getCurrentDateString(): string {
   return dateString;
 }
 
+export function getNextWeektDateString(): string {
+  // Get the current date
+  const currentDate = new Date();
+  const nextWeekDate = new Date(currentDate);
+  nextWeekDate.setDate(currentDate.getDate() + 7);
+
+  // Extract year, month, and day components
+  const year = nextWeekDate.getFullYear();
+  const month = String(nextWeekDate.getMonth() + 1).padStart(2, "0"); // Month is zero-based, so add 1 and pad with leading zero
+  const day = String(nextWeekDate.getDate()).padStart(2, "0"); // Pad with leading zero
+
+  // Create the date string in the desired format
+  const dateString = `${year}-${month}-${day}`;
+
+  return dateString;
+}
+
 export function getCurrentWeekDate(
   today: Date
 ): Array<{ day: string; date: string }> {
