@@ -4,6 +4,8 @@ import { IHappyHour, ILeaveSchedule, IMember } from "./interface";
 import { LeaveAmountMap, monthAbbreviations } from "./config";
 import { convertDatetimeToDDMMM, getCurrentDateString } from "./utils";
 
+const LEAVE_SCHEDULE_COLUMNS = `id, datetime, member, leave_type, medical_cert, status, leave_start_dt::text, leave_end_dt::text, leave_period, period_detail, is_approve`;
+
 export async function pushMsg(client: Client, replyToken: string, msg: string) {
   await client.replyMessage(replyToken, {
     type: "text",
@@ -136,38 +138,34 @@ export async function callQuery(
 export async function showWaitApprove(
   pool: pg.Pool,
   client: Client,
-  replyToken: string
+  replyToken: string,
+  optionStatus: string
 ) {
+  console.log(optionStatus);
   const { rows } = await pool.query(
-    `SELECT 
-      id,
-      datetime, 
-      member, 
-      leave_type,
-      medical_cert,
-      status,
-      leave_start_dt::text,
-      leave_end_dt::text,
-      leave_period,
-      period_detail,
-      is_approve
+    `SELECT ${LEAVE_SCHEDULE_COLUMNS}
     FROM leave_schedule 
     where is_approve = false
+    ${optionStatus !== "" ? `and status = '${optionStatus}'` : ""}
     order by leave_start_dt`
   );
   const leaveDetails = rows as ILeaveSchedule[];
 
   const replyMessage =
-    "✏️ รายการที่ยังรอ Approve\n\n" +
+    `✏️ รายการที่ยังรอ Approve ${
+      optionStatus == "" ? "[ทั้งหมด]" : `[${optionStatus}]`
+    }\n\n` +
     leaveDetails
       .map((detail) => {
-        return `🔴<${detail.id}> ${detail.member} ${detail.leave_type} ${
+        return `🔴<${detail.id}> [${detail.status}] ${detail.member} ${
+          detail.leave_type
+        } ${
           detail.leave_start_dt == detail.leave_end_dt
             ? convertDatetimeToDDMMM(detail.leave_start_dt)
             : convertDatetimeToDDMMM(detail.leave_start_dt) +
               "-" +
               convertDatetimeToDDMMM(detail.leave_end_dt)
-        } ${detail.period_detail} ${detail.status}`;
+        } ${detail.period_detail}`;
       })
       .join("\n");
 
@@ -211,18 +209,30 @@ export async function updateApproveFlag(
   pool: pg.Pool,
   client: Client,
   replyToken: string,
-  id: number
+  ids: number[]
 ) {
-  const query = `
-    UPDATE leave_schedule
-    SET is_approve = true
-    WHERE ID = ${id};
-  `;
-  await pool.query(query);
-  const replyMessage = `✅ Approve request ID: ${id} successfully`;
-  await pushMsg(client, replyToken, replyMessage);
-}
+  if (ids.length === 0) {
+    console.log("No IDs provided for update.");
+    return;
+  }
 
+  try {
+    const idList = ids.join(","); // Convert the array of IDs to a comma-separated string
+    const query = `
+      UPDATE leave_schedule
+      SET is_approve = true
+      WHERE ID IN (${idList});
+    `;
+    await pool.query(query);
+
+    const replyMessage = `✅ Approve request IDs: ${ids.join(
+      ", "
+    )} successfully`;
+    await pushMsg(client, replyToken, replyMessage);
+  } catch (error) {
+    console.error("Error updating records:", error);
+  }
+}
 export async function showListToday(
   pool: pg.Pool,
   client: Client,
@@ -231,18 +241,7 @@ export async function showListToday(
   const currentDate = getCurrentDateString();
 
   const { rows } = await pool.query(
-    `SELECT 
-      id,
-      datetime, 
-      member, 
-      leave_type,
-      medical_cert,
-      status,
-      leave_start_dt::text,
-      leave_end_dt::text,
-      leave_period,
-      period_detail,
-      is_approve
+    `SELECT ${LEAVE_SCHEDULE_COLUMNS}
     FROM leave_schedule 
     where leave_start_dt <= '${currentDate}' and '${currentDate}' <= leave_end_dt
     order by leave_start_dt`
@@ -274,18 +273,7 @@ export async function showListThisWeek(
   endDate: string
 ) {
   const { rows } = await pool.query(
-    `SELECT 
-      id,
-      datetime, 
-      member, 
-      leave_type,
-      medical_cert,
-      status,
-      leave_start_dt::text,
-      leave_end_dt::text,
-      leave_period,
-      period_detail,
-      is_approve
+    `SELECT ${LEAVE_SCHEDULE_COLUMNS}
     FROM leave_schedule 
     where leave_start_dt >= '${startDate}' and leave_start_dt <= '${endDate}'
     order by leave_start_dt`
@@ -297,14 +285,15 @@ export async function showListThisWeek(
 export async function getIsLeaveDuplicate(
   pool: pg.Pool,
   member: string,
-  date: string
-): Promise<boolean> {
-  const query = `SELECT Count(1) as total FROM leave_schedule
+  startDate: string,
+  endDate: string
+) {
+  const query = `SELECT id FROM leave_schedule
   WHERE member = '${member}' and
-  leave_start_dt <= '${date}' and '${date}' <= leave_end_dt
+  leave_start_dt = '${startDate}' and leave_end_dt = '${endDate}'
   `;
   const { rows } = await pool.query(query);
-  return rows[0].total > 0;
+  return rows.length > 0 ? rows[0].id : 0;
 }
 
 export async function showMyList(
@@ -314,18 +303,7 @@ export async function showMyList(
   replyToken: string
 ) {
   const { rows } = await pool.query(
-    `SELECT 
-      id,
-      datetime, 
-      member, 
-      leave_type,
-      medical_cert,
-      status,
-      leave_start_dt::text,
-      leave_end_dt::text,
-      leave_period,
-      period_detail,
-      is_approve
+    `SELECT ${LEAVE_SCHEDULE_COLUMNS}
     FROM leave_schedule 
     WHERE member = '${member}'
     order by leave_start_dt`
@@ -383,7 +361,26 @@ export async function updateKeyStatus(
     WHERE ID = ${id};
   `;
   await pool.query(query);
-  const replyMessage = `✅ Update ID:${id} to '${key}'`;
+
+  // Get new details after update
+  const { rows } = await pool.query(
+    `SELECT ${LEAVE_SCHEDULE_COLUMNS}
+    FROM leave_schedule 
+    where id=${id}`
+  );
+  const leaveDetail = rows[0] as ILeaveSchedule;
+  const leaveDetailText = `ข้อมูลล่าสุด: <${id}> ${leaveDetail.member} ${
+    leaveDetail.leave_type
+  } ${
+    leaveDetail.leave_start_dt == leaveDetail.leave_end_dt
+      ? convertDatetimeToDDMMM(leaveDetail.leave_start_dt)
+      : convertDatetimeToDDMMM(leaveDetail.leave_start_dt) +
+        "-" +
+        convertDatetimeToDDMMM(leaveDetail.leave_end_dt)
+  } ${leaveDetail.period_detail} ${leaveDetail.status}
+        `;
+
+  const replyMessage = `✅ Update ID:${id} to '${key}'\n${leaveDetailText}`;
   await pushMsg(client, replyToken, replyMessage);
 }
 
@@ -391,18 +388,7 @@ export async function getListToday(pool: pg.Pool) {
   const currentDate = getCurrentDateString();
 
   const { rows } = await pool.query(
-    `SELECT 
-      id,
-      datetime, 
-      member, 
-      leave_type,
-      medical_cert,
-      status,
-      leave_start_dt::text,
-      leave_end_dt::text,
-      leave_period,
-      period_detail,
-      is_approve
+    `SELECT ${LEAVE_SCHEDULE_COLUMNS}
     FROM leave_schedule 
     where leave_start_dt <= '${currentDate}' and '${currentDate}' <= leave_end_dt
     order by leave_start_dt`
@@ -430,18 +416,7 @@ export async function getListToday(pool: pg.Pool) {
 
 export async function getWaitApprove(pool: pg.Pool) {
   const { rows } = await pool.query(
-    `SELECT 
-      id,
-      datetime, 
-      member, 
-      leave_type,
-      medical_cert,
-      status,
-      leave_start_dt::text,
-      leave_end_dt::text,
-      leave_period,
-      period_detail,
-      is_approve
+    `SELECT ${LEAVE_SCHEDULE_COLUMNS}
     FROM leave_schedule 
     where is_approve = false
     order by leave_start_dt`

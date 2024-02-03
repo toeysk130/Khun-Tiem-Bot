@@ -22,6 +22,7 @@ import {
   tableLists,
   validKeyStatus,
   validReportTypes,
+  validUpcaseMonths,
 } from "./config";
 import {
   getCurrentDateString,
@@ -69,14 +70,14 @@ export async function handleIncomingMessage(event: WebhookEvent) {
 
   if (command == "คำสั่ง") {
     const replyMessage = `🤖 รายการคำสั่ง\
-      \n👉สมัคร <ชื่อ>\
       \n👉แจ้งลา <ลาป่วย,ลากิจ,ลาพักร้อน,hh> <วันเริ่มลา 26JAN,26JAN-28JAN> <จำนวน 1วัน, 3วัน, ครึ่งเช้า, ครึ่งบ่าย> <key,nokey>\
       \n👉อัปเดต <id> <key,nokey>\
-      \n👉รายงาน <ของฉัน, วันนี้, วีคนี้>\
-      \n👉เตือน <approve>\
-      \n👉ตาราง <member, leave_schedule>\
-      \n👉approve <id> (⛔ Only Admin)\
+      \n👉รายงาน/รายการ <ของฉัน, วันนี้, วีคนี้, วีคหน้า>\
+      \n👉เตือน <approve> <'',key,nokey>\
+      \n👉ตาราง member\
+      \n👉approve <id, ids(8,9)> (⛔ Only Admin)\
       \n👉ลบ <id> (⛔ Only Admin) (⚠️ Developing)\
+      \n👉สมัคร <ชื่อ>\
       `;
     await pushMsg(client, replyToken, replyMessage);
   }
@@ -111,9 +112,15 @@ export async function handleIncomingMessage(event: WebhookEvent) {
   }
 
   // เตือน <รายวัน, approve>
-  else if (command == "เตือน" && commandLen == 2) {
+  else if (
+    command === "เตือน" &&
+    (commandArr.length === 2 || commandArr.length === 3)
+  ) {
     const option = commandArr[1];
-    if (option == "approve") await showWaitApprove(pool, client, replyToken);
+    const optionStatus = commandArr.length === 3 ? commandArr[2] : "";
+
+    if (option == "approve")
+      await showWaitApprove(pool, client, replyToken, optionStatus);
   }
 
   // approve <ids เช่น approve 8 หรือ approve 3,4,8,10> (⛔ Only Admin)
@@ -137,11 +144,22 @@ export async function handleIncomingMessage(event: WebhookEvent) {
         return;
       }
 
-      await updateApproveFlag(pool, client, replyToken, id);
+      await updateApproveFlag(pool, client, replyToken, ids);
+    } else if (ids.length > 1) {
+      // validate ids
+      for (const id of ids) {
+        if (!(await checkIfIdExist(pool, id.toString()))) {
+          const replyMessage = `⛔ ไม่มี ID:${id} ในระบบ`;
+          await pushMsg(client, replyToken, replyMessage);
+          return;
+        }
+      }
+
+      await updateApproveFlag(pool, client, replyToken, ids);
     }
   }
   //👉รายงาน <ของฉัน, วันนี้, วีคนี้, เดือนนี้> (⛔ Developing)
-  else if (command == "รายงาน" && commandLen == 2) {
+  else if ((command == "รายงาน" || command == "รายการ") && commandLen == 2) {
     const reportType = commandArr[1];
     // command validation
     if (!validReportTypes.includes(reportType)) {
@@ -174,29 +192,17 @@ export async function handleIncomingMessage(event: WebhookEvent) {
 
       // Function to format date as DDMMM (e.g., 29JAN)
       function formatDate(date: string): string {
-        const monthNames = [
-          "JAN",
-          "FEB",
-          "MAR",
-          "APR",
-          "MAY",
-          "JUN",
-          "JUL",
-          "AUG",
-          "SEP",
-          "OCT",
-          "NOV",
-          "DEC",
-        ];
         const parts = date.split("-");
         const day = parts[2];
         const monthIndex = parseInt(parts[1], 10) - 1; // Month is 0-indexed in the array
-        const month = monthNames[monthIndex];
+        const month = validUpcaseMonths[monthIndex];
         return `${day}${month}`;
       }
 
       // Prepare the result string with formatted dates
-      let resultString = "😶‍🌫️ รายงานการลา สัปดาห์นี้\n\n";
+      let resultString = `😶‍🌫️ ใตรลาบ้าง ${
+        reportType == "วีคนี้" ? "สัปดาห์นี้" : "สัปดาห์หน้า"
+      }\n\n`;
 
       currentWeekDates.forEach((weekDate, index) => {
         // Initialize members array for each day

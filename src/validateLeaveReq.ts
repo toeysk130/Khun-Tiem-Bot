@@ -7,7 +7,7 @@ import {
   validLeaveTypes,
   validMonths,
 } from "./config";
-import { getIsLeaveDuplicate, pushMsg } from "./lineAPI";
+import { getIsLeaveDuplicate, pushMsg, updateKeyStatus } from "./lineAPI";
 
 export async function validateLeaveRequest(
   pool: pg.Pool,
@@ -73,9 +73,15 @@ export async function validateLeaveRequest(
       const firstDate = new Date(Date.UTC(firstYear, firstMonth, firstDay));
       const dateString = firstDate.toISOString().split("T")[0]; // Output: '2024-02-02'
 
-      if (await getIsLeaveDuplicate(pool, member, dateString)) {
-        const replyMessage = `😤 วันที่ '${leaveStartDate}' เคยลาไปแล้ว..จะลาซ้ำไม่ได้`;
-        await pushMsg(client, replyToken, replyMessage);
+      const id = await getIsLeaveDuplicate(
+        pool,
+        member,
+        dateString,
+        dateString
+      );
+
+      if (id > 0) {
+        await updateKeyStatus(pool, client, replyToken, id, leaveKey);
         return false;
       }
     }

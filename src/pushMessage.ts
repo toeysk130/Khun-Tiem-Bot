@@ -28,7 +28,7 @@ export async function pushMessage() {
   // Define the message you want to send
   const message1 = {
     type: "text",
-    text: "☀️☀️ สวัสดียามเช้าที่สดใส ☀️☀️\n\n" + listToday,
+    text: "☀️ สวัสดียามเช้าที่สดใส ☀️\n\n" + listToday,
   };
 
   // Create the payload for the request

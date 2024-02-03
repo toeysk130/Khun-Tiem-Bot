@@ -43,6 +43,21 @@ export const validMonths = [
   "dec",
 ];
 
+export const validUpcaseMonths = [
+  "JAN",
+  "FEB",
+  "MAR",
+  "APR",
+  "MAY",
+  "JUN",
+  "JUL",
+  "AUG",
+  "SEP",
+  "OCT",
+  "NOV",
+  "DEC",
+];
+
 export const validLeaveAmounts = [
   "1วัน",
   "2วัน",
