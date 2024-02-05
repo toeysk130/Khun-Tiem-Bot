@@ -1,4 +1,4 @@
-import { daysOfWeek } from "./config";
+import { daysOfWeek } from "../config/config";
 
 export function convertDatetimeToDDMMM(inputDateString: string): string {
   // Parse the input date string

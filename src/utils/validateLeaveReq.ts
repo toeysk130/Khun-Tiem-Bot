@@ -6,8 +6,8 @@ import {
   validLeaveAmounts,
   validLeaveTypes,
   validMonths,
-} from "./config";
-import { getIsLeaveDuplicate, pushMsg, updateKeyStatus } from "./lineAPI";
+} from "../config/config";
+import { getIsLeaveDuplicate, pushMsg, updateKeyStatus } from "../API/lineAPI";
 
 export async function validateLeaveRequest(
   pool: pg.Pool,

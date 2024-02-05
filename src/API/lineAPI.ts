@@ -1,8 +1,8 @@
 import { Client } from "@line/bot-sdk";
 import pg from "pg";
-import { IHappyHour, ILeaveSchedule, IMember } from "./interface";
-import { LeaveAmountMap, monthAbbreviations } from "./config";
-import { convertDatetimeToDDMMM, getCurrentDateString } from "./utils";
+import { IHappyHour, ILeaveSchedule, IMember } from "../config/interface";
+import { LeaveAmountMap, monthAbbreviations } from "../config/config";
+import { convertDatetimeToDDMMM, getCurrentDateString } from "../utils/utils";
 
 const LEAVE_SCHEDULE_COLUMNS = `id, datetime, member, leave_type, medical_cert, status, leave_start_dt::text, leave_end_dt::text, leave_period, period_detail, is_approve, description`;
 

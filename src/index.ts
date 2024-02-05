@@ -2,9 +2,9 @@ import bodyParser from "body-parser";
 import express from "express";
 import { WebhookEvent } from "@line/bot-sdk";
 import * as dotenv from "dotenv";
-import { handleIncomingMessage } from "./handleIncomingMessage";
+import { handleIncomingMessage } from "./handlers/handleIncomingMessage";
 import cron from "node-cron";
-import { pushMessage } from "./pushMessage";
+import { pushMessage } from "./API/pushMessage";
 
 // Setup
 dotenv.config();

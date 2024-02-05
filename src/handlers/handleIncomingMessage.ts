@@ -1,7 +1,7 @@
 import { Client, TextEventMessage, WebhookEvent } from "@line/bot-sdk";
 import pg from "pg";
 import * as dotenv from "dotenv";
-import { validateLeaveRequest } from "./validateLeaveReq";
+import { validateLeaveRequest } from "../utils/validateLeaveReq";
 import {
   addNewLeaveRequest,
   checkIfIdExist,
@@ -16,20 +16,20 @@ import {
   showWaitApprove,
   updateApproveFlag,
   updateKeyStatus,
-} from "./lineAPI";
+} from "../API/lineAPI";
 import {
   daysColor,
   tableLists,
   validKeyStatus,
   validReportTypes,
   validUpcaseMonths,
-} from "./config";
+} from "../config/config";
 import {
   getCurrentDateString,
   getCurrentWeekDate,
   getNextWeektDateString,
-} from "./utils";
-import { pushMessage } from "./pushMessage";
+} from "../utils/utils";
+import { pushMessage } from "../API/pushMessage";
 
 dotenv.config();
 const pool = new pg.Pool();
@@ -70,7 +70,7 @@ export async function handleIncomingMessage(event: WebhookEvent) {
 
   if (command == "คำสั่ง") {
     const replyMessage = `🤖 รายการคำสั่ง\
-      \n👉แจ้งลา <ลาพักร้อน, ลาป่วย, ลากิจ, hh, อบรม> <วันเริ่มลา 26JAN,26JAN-28JAN> <จำนวน 1วัน, 3วัน, ครึ่งเช้า, ครึ่งบ่าย> <key,nokey>\
+      \n👉แจ้งลา <ลาพักร้อน, ลาป่วย, ลากิจ, hh, อบรม> <วันเริ่มลา 26JAN,26JAN-28JAN> <จำนวน 1วัน, 3วัน, ครึ่งเช้า, ครึ่งบ่าย> <key,nokey> <เหตุผล>\
       \n👉อัปเดต <id> <key,nokey>\
       \n👉รายงาน/รายการ <ของฉัน, วันนี้, วีคนี้, วีคหน้า>\
       \n👉เตือน <approve> <'',key,nokey>\
