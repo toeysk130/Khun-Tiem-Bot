@@ -8,7 +8,7 @@ export const validReportTypes = [
   "เดือนนี้",
 ];
 
-export const validLeaveTypes = ["ลาป่วย", "ลากิจ", "ลาพักร้อน", "hh"];
+export const validLeaveTypes = ["ลาพักร้อน", "ลาป่วย", "ลากิจ", "hh", "อบรม"];
 
 export const tableLists = ["member", "happy_hour", "leave_schedule"];
 

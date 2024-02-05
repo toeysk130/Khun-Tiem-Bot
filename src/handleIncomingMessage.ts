@@ -70,7 +70,7 @@ export async function handleIncomingMessage(event: WebhookEvent) {
 
   if (command == "คำสั่ง") {
     const replyMessage = `🤖 รายการคำสั่ง\
-      \n👉แจ้งลา <ลาป่วย,ลากิจ,ลาพักร้อน,hh> <วันเริ่มลา 26JAN,26JAN-28JAN> <จำนวน 1วัน, 3วัน, ครึ่งเช้า, ครึ่งบ่าย> <key,nokey>\
+      \n👉แจ้งลา <ลาพักร้อน, ลาป่วย, ลากิจ, hh, อบรม> <วันเริ่มลา 26JAN,26JAN-28JAN> <จำนวน 1วัน, 3วัน, ครึ่งเช้า, ครึ่งบ่าย> <key,nokey>\
       \n👉อัปเดต <id> <key,nokey>\
       \n👉รายงาน/รายการ <ของฉัน, วันนี้, วีคนี้, วีคหน้า>\
       \n👉เตือน <approve> <'',key,nokey>\
@@ -200,7 +200,7 @@ export async function handleIncomingMessage(event: WebhookEvent) {
       }
 
       // Prepare the result string with formatted dates
-      let resultString = `😶‍🌫️ ใตรลาบ้าง ${
+      let resultString = `😶‍🌫️ ใครลาบ้าง ${
         reportType == "วีคนี้" ? "สัปดาห์นี้" : "สัปดาห์หน้า"
       }\n\n`;
 
@@ -217,9 +217,13 @@ export async function handleIncomingMessage(event: WebhookEvent) {
             weekDate.date >= leave.leave_start_dt &&
             weekDate.date <= leave.leave_end_dt
           ) {
-            dayMembersMap[weekDate.day].push(
-              leave.member + "(" + leave.leave_type + ")"
-            );
+            const leaveStr = `${leave.member} (${leave.leave_type}${
+              leave.period_detail.startsWith("ครึ่ง")
+                ? `-${leave.period_detail}`
+                : ``
+            })`;
+
+            dayMembersMap[weekDate.day].push(leaveStr);
           }
         });
 

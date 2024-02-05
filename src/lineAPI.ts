@@ -4,7 +4,7 @@ import { IHappyHour, ILeaveSchedule, IMember } from "./interface";
 import { LeaveAmountMap, monthAbbreviations } from "./config";
 import { convertDatetimeToDDMMM, getCurrentDateString } from "./utils";
 
-const LEAVE_SCHEDULE_COLUMNS = `id, datetime, member, leave_type, medical_cert, status, leave_start_dt::text, leave_end_dt::text, leave_period, period_detail, is_approve`;
+const LEAVE_SCHEDULE_COLUMNS = `id, datetime, member, leave_type, medical_cert, status, leave_start_dt::text, leave_end_dt::text, leave_period, period_detail, is_approve, description`;
 
 export async function pushMsg(client: Client, replyToken: string, msg: string) {
   await client.replyMessage(replyToken, {
@@ -44,10 +44,9 @@ export async function addNewLeaveRequest(
   member: IMember,
   commandArr: string[]
 ) {
-  const leaveType = commandArr[1];
-  const leaveStartDate = commandArr[2];
-  const leaveAmount = commandArr[3];
-  const leaveKey = commandArr[4];
+  const [, leaveType, leaveStartDate, leaveAmount, leaveKey, ...descriptions] =
+    commandArr;
+  const description = descriptions.join(" ");
 
   let formattedLeaveStartDate = "";
   let formattedLeaveEndDate = "";
@@ -93,8 +92,8 @@ export async function addNewLeaveRequest(
 
   const currentDateTime = new Date();
   const formattedDateTime = currentDateTime.toISOString();
-  const query = `INSERT INTO leave_schedule (datetime, member, leave_type, leave_start_dt, leave_end_dt, leave_period, period_detail, status) \
-  VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`;
+  const query = `INSERT INTO leave_schedule (datetime, member, leave_type, leave_start_dt, leave_end_dt, leave_period, period_detail, status, description) \
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);`;
 
   const values = [
     formattedDateTime,
@@ -105,6 +104,7 @@ export async function addNewLeaveRequest(
     formattedLeaveAmount,
     leaveAmount,
     leaveKey,
+    description,
   ];
   const successMsg = `🥰 Added new leave request for ${member.name} successfully`;
   const failMsg = `😥 Failed to add new leave request for ${member.name}`;
@@ -260,7 +260,9 @@ export async function showListToday(
             : convertDatetimeToDDMMM(detail.leave_start_dt) +
               "-" +
               convertDatetimeToDDMMM(detail.leave_end_dt)
-        } ${detail.period_detail} ${detail.status}`;
+        } ${detail.period_detail} ${detail.status} ${
+          detail.description == null ? "" : `(${detail.description})`
+        }`;
       })
       .join("\n");
 
@@ -322,7 +324,9 @@ export async function showMyList(
             : convertDatetimeToDDMMM(detail.leave_start_dt) +
               "-" +
               convertDatetimeToDDMMM(detail.leave_end_dt)
-        } ${detail.period_detail} ${detail.status}`;
+        } ${detail.period_detail} ${detail.status} ${
+          detail.description == null ? "" : `(${detail.description})`
+        }`;
       })
       .join("\n");
 

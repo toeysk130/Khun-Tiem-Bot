@@ -25,4 +25,5 @@ export interface ILeaveSchedule {
   leave_period: number;
   period_detail: string;
   is_approve: boolean;
+  description: string;
 }
