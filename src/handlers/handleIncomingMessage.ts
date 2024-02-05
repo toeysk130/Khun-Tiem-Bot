@@ -1,8 +1,9 @@
+import * as dotenv from "dotenv";
 import { Client, TextEventMessage, WebhookEvent } from "@line/bot-sdk";
 import pg from "pg";
-import * as dotenv from "dotenv";
 import { validateLeaveRequest } from "../utils/validateLeaveReq";
 import {
+  addNewHhLeaveRequest,
   addNewLeaveRequest,
   checkIfIdExist,
   checkIfMyIdExist,
@@ -16,13 +17,15 @@ import {
   showWaitApprove,
   updateApproveFlag,
   updateKeyStatus,
-} from "../API/lineAPI";
+} from "../API/leaveScheduleAPI";
 import {
   daysColor,
   tableLists,
+  validHhTypes,
   validKeyStatus,
   validReportTypes,
   validUpcaseMonths,
+  validhhAmts,
 } from "../config/config";
 import {
   getCurrentDateString,
@@ -30,6 +33,8 @@ import {
   getNextWeektDateString,
 } from "../utils/utils";
 import { pushMessage } from "../API/pushMessage";
+import { validateHhRequest } from "../utils/validateHhReq";
+import { addHhRecord } from "../API/hhAPI";
 
 dotenv.config();
 const pool = new pg.Pool();
@@ -41,7 +46,7 @@ const client = new Client({
 export async function handleIncomingMessage(event: WebhookEvent) {
   if (event.type !== "message") return;
   const textMessage = event.message as TextEventMessage;
-  const receivedText = textMessage.text.toLowerCase();
+  const receivedText = textMessage.text.trim().toLowerCase();
   const replyToken = event.replyToken;
 
   const commandArr = receivedText.split(" ");
@@ -70,19 +75,27 @@ export async function handleIncomingMessage(event: WebhookEvent) {
 
   if (command == "คำสั่ง") {
     const replyMessage = `🤖 รายการคำสั่ง\
-      \n👉แจ้งลา <ลาพักร้อน, ลาป่วย, ลากิจ, hh, อบรม> <วันเริ่มลา 26JAN,26JAN-28JAN> <จำนวน 1วัน, 3วัน, ครึ่งเช้า, ครึ่งบ่าย> <key,nokey> <เหตุผล>\
+      \n👉แจ้งลา <ลาพักร้อน, ลาป่วย, ลากิจ, อบรม> <วันเริ่มลา 26JAN,26JAN-28JAN> <จำนวน 1วัน, 3วัน, ครึ่งเช้า, ครึ่งบ่าย> <key,nokey> <เหตุผล>\
       \n👉อัปเดต <id> <key,nokey>\
+      \n👉hh ใช้ <1h,2h,...,40h> <วันลา 26JAN> <1วัน, 3วัน, ครึ่งเช้า, ครึ่งบ่าย> <เหตุผล>\
+      \n👉hh เพิ่ม <1h,2h,...,40h> <เหตุผล>\
       \n👉รายงาน/รายการ <ของฉัน, วันนี้, วีคนี้, วีคหน้า>\
       \n👉เตือน <approve> <'',key,nokey>\
-      \n👉ตาราง member\
       \n👉approve <id, ids(8,9)> (⛔ Only Admin)\
-      \n👉ลบ <id> (⛔ Only Admin) (⚠️ Developing)\
+      \n👉ตาราง <member, happy_hour> (⛔ Only Admin)\
+      \n👉แอบดู <ชื่อคน> (⛔ Only Admin)\
       \n👉สมัคร <ชื่อ>\
       `;
+    // \n👉ลบ <id> (⛔ Only Admin) (⚠️ Developing)\
     await pushMsg(client, replyToken, replyMessage);
   }
   // ตาราง <member, happy_hour, leave_schedule>
   else if (command == "ตาราง" && commandLen == 2) {
+    if (member.is_admin == false) {
+      const replyMessage = "😡 ไม่ใช่ Admin ใช้งานไม่ได้!";
+      await pushMsg(client, replyToken, replyMessage);
+      return;
+    }
     const tableName = commandArr[1];
     // command validation
     if (!tableLists.includes(tableName)) {
@@ -244,7 +257,7 @@ export async function handleIncomingMessage(event: WebhookEvent) {
     // validation
     if (!validKeyStatus.includes(status)) {
       const replyMessage = `⚠️ ประเภทการคีย์ '${status}' ไม่มีในระบบ\
-      \n ตัวเลือกที่มี ${validKeyStatus.join(" ")}`;
+      \n✅ ตัวเลือกที่มี ${validKeyStatus.join(" ")}`;
       await pushMsg(client, replyToken, replyMessage);
       return;
     }
@@ -264,5 +277,58 @@ export async function handleIncomingMessage(event: WebhookEvent) {
       return;
     }
     await pushMessage();
+  } else if (command == "hh") {
+    const hhType = commandArr[1]; // "เพิ่ม", "ใช้"
+    const hhAmt = commandArr[2]; // 1h,2h,...,40h
+
+    if (!validHhTypes.includes(hhType)) {
+      // "เพิ่ม", "ใช้"
+      const replyMessage = `⚠️ ประเภท hh '${hhType}' ไม่มีในระบบ\
+      \n✅ ตัวเลือกที่มี '${validHhTypes.join(", ")}'`;
+      await pushMsg(client, replyToken, replyMessage);
+      return;
+    }
+
+    if (!validhhAmts.includes(hhAmt)) {
+      // 1h,2h,...,40h-
+      const replyMessage = `⚠️ จำนวน hh '${hhAmt}' ไม่มีในระบบ\
+      \n✅ ตัวเลือกที่มี '1h,2h,...,40h'`;
+      await pushMsg(client, replyToken, replyMessage);
+      return;
+    }
+
+    if (hhType == "เพิ่ม") {
+      const description = commandArr.slice(3).join(" "); // other elements will be description
+      await addHhRecord(
+        pool,
+        client,
+        replyToken,
+        member.name,
+        hhType,
+        parseInt(hhAmt),
+        description
+      );
+    } else if (hhType == "ใช้") {
+      if (
+        !(await validateHhRequest(
+          pool,
+          client,
+          replyToken,
+          member.name,
+          commandArr
+        ))
+      )
+        return;
+
+      await addNewHhLeaveRequest(pool, client, replyToken, member, commandArr);
+    }
+  } else if (command == "แอบดู") {
+    if (member.is_admin == false) {
+      const replyMessage = "😡 ไม่ใช่ Admin ใช้งานไม่ได้!";
+      await pushMsg(client, replyToken, replyMessage);
+      return;
+    }
+    const name = commandArr[1];
+    await showMyList(pool, client, name, replyToken);
   }
 }

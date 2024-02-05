@@ -7,10 +7,18 @@ export interface IMember {
 
 export interface IHappyHour {
   id: number;
+  datetime: Date;
   member: string;
   type: string;
   hour: number;
   approver: string;
+}
+
+export interface IAllRemaiHH {
+  member: string;
+  total_add: number;
+  total_del: number;
+  remaining: number;
 }
 
 export interface ILeaveSchedule {

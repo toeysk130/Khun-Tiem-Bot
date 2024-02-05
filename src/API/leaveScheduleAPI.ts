@@ -2,7 +2,12 @@ import { Client } from "@line/bot-sdk";
 import pg from "pg";
 import { IHappyHour, ILeaveSchedule, IMember } from "../config/interface";
 import { LeaveAmountMap, monthAbbreviations } from "../config/config";
-import { convertDatetimeToDDMMM, getCurrentDateString } from "../utils/utils";
+import {
+  convertDatetimeToDDMMM,
+  getCurrentDateString,
+  getCurrentTimestamp,
+} from "../utils/utils";
+import { delHhRecord, getAllRemainingHh, getRemainingHh } from "./hhAPI";
 
 const LEAVE_SCHEDULE_COLUMNS = `id, datetime, member, leave_type, medical_cert, status, leave_start_dt::text, leave_end_dt::text, leave_period, period_detail, is_approve, description`;
 
@@ -90,8 +95,7 @@ export async function addNewLeaveRequest(
     formattedLeaveAmount = LeaveAmountMap[leaveAmount];
   }
 
-  const currentDateTime = new Date();
-  const formattedDateTime = currentDateTime.toISOString();
+  const formattedDateTime = getCurrentTimestamp();
   const query = `INSERT INTO leave_schedule (datetime, member, leave_type, leave_start_dt, leave_end_dt, leave_period, period_detail, status, description) \
   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);`;
 
@@ -109,6 +113,98 @@ export async function addNewLeaveRequest(
   const successMsg = `🥰 Added new leave request for ${member.name} successfully`;
   const failMsg = `😥 Failed to add new leave request for ${member.name}`;
   await callQuery(pool, client, replyToken, query, values, successMsg, failMsg);
+}
+
+export async function addNewHhLeaveRequest(
+  pool: pg.Pool,
+  client: Client,
+  replyToken: string,
+  member: IMember,
+  commandArr: string[]
+) {
+  const leaveType = "hh";
+  const leaveKey = "key";
+  const isApprove = true;
+  const hhAmt = commandArr[2];
+  const leaveStartDate = commandArr[3];
+  const leaveAmount = commandArr[4];
+  const description = commandArr.slice(5).join(" ");
+
+  let formattedLeaveStartDate = "";
+  let formattedLeaveEndDate = "";
+  let formattedLeaveAmount = 0;
+
+  // ลาภายในวันเดียว
+  if (leaveStartDate.length == 5) {
+    const month = leaveStartDate.slice(-3);
+    // Parse the date strings manually
+    const firstDay = parseInt(leaveStartDate.slice(0, 2));
+    const firstMonth = monthAbbreviations[leaveStartDate.slice(2, 5)];
+    const firstYear = new Date().getUTCFullYear();
+    formattedLeaveStartDate = new Date(
+      Date.UTC(firstYear, firstMonth, firstDay)
+    ).toISOString();
+    formattedLeaveEndDate = formattedLeaveStartDate;
+    formattedLeaveAmount = LeaveAmountMap[leaveAmount];
+  }
+
+  // ลาหลายวัน
+  if (leaveStartDate.length == 11) {
+    const dates = leaveStartDate.split("-");
+    const startDate = dates[0];
+    const endDate = dates[1];
+
+    // Parse the date strings manually
+    const firstDay = parseInt(startDate.slice(0, 2));
+    const firstMonth = monthAbbreviations[startDate.slice(2, 5)];
+    const firstYear = new Date().getUTCFullYear();
+
+    const secondDay = parseInt(endDate.slice(0, 2));
+    const secondMonth = monthAbbreviations[endDate.slice(2, 5)];
+    const secondYear = new Date().getUTCFullYear();
+
+    formattedLeaveStartDate = new Date(
+      Date.UTC(firstYear, firstMonth, firstDay)
+    ).toISOString();
+    formattedLeaveEndDate = new Date(
+      Date.UTC(secondYear, secondMonth, secondDay)
+    ).toISOString();
+    formattedLeaveAmount = LeaveAmountMap[leaveAmount];
+  }
+
+  const formattedDateTime = getCurrentTimestamp();
+  const query = `INSERT INTO leave_schedule (datetime, member, leave_type, leave_start_dt, leave_end_dt, leave_period, period_detail, status, description, is_approve) \
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);`;
+
+  const values = [
+    formattedDateTime,
+    member.name,
+    leaveType,
+    formattedLeaveStartDate,
+    formattedLeaveEndDate,
+    formattedLeaveAmount,
+    leaveAmount,
+    leaveKey,
+    description,
+    isApprove,
+  ];
+
+  try {
+    await pool.query(query, values);
+    await delHhRecord(pool, member.name, parseInt(hhAmt), description);
+  } catch (error) {
+    console.error("Error inserting data:", error);
+    await client.replyMessage(replyToken, {
+      type: "text",
+      text: `😥 Failed to add new leave request for ${member.name}`,
+    });
+  }
+  const remaining = await getRemainingHh(pool, member.name);
+  await client.replyMessage(replyToken, {
+    type: "text",
+    text: `❤️‍🔥 ใช้ hh สำหรับ ${member.name} สำเร็จ คงเหลือ: ${remaining} hours\
+    ${remaining < 0 ? "\n😱 เห้ยๆ ติดลบแล้วนะเฮ้ย!!!!!!!!!!!!!" : ""}`,
+  });
 }
 
 export async function callQuery(
@@ -141,7 +237,6 @@ export async function showWaitApprove(
   replyToken: string,
   optionStatus: string
 ) {
-  console.log(optionStatus);
   const { rows } = await pool.query(
     `SELECT ${LEAVE_SCHEDULE_COLUMNS}
     FROM leave_schedule 
@@ -157,9 +252,9 @@ export async function showWaitApprove(
     }\n\n` +
     leaveDetails
       .map((detail) => {
-        return `🔴<${detail.id}> [${detail.status}] ${detail.member} ${
-          detail.leave_type
-        } ${
+        return `${detail.status == "key" ? "🟡" : "🔴"}<${detail.id}> [${
+          detail.status
+        }] ${detail.member} ${detail.leave_type} ${
           detail.leave_start_dt == detail.leave_end_dt
             ? convertDatetimeToDDMMM(detail.leave_start_dt)
             : convertDatetimeToDDMMM(detail.leave_start_dt) +
@@ -178,31 +273,27 @@ export async function showTable(
   replyToken: string,
   tableName: string
 ) {
-  // List all rows
-  let replyMessage = "";
-  const { rows } = await pool.query(`SELECT * FROM ${tableName}`);
-
   if (tableName == "member") {
+    const { rows } = await pool.query(`SELECT * FROM ${tableName}`);
     const members: IMember[] = rows as IMember[];
 
-    replyMessage = members
+    const replyMessage = members
       .map((member) => {
         return `${member.name} ${member.is_admin ? "(admin)" : ""}`;
       })
       .join("\n");
+    pushMsg(client, replyToken, replyMessage);
   } else if (tableName == "happy_hour") {
-    const hhs: IHappyHour[] = rows as IHappyHour[];
-
-    replyMessage =
-      "👉id, name, type, hour, appvr\n" +
-      hhs
-        .map((hh) => {
-          return `👉${hh.id}, ${hh.member}, ${hh.type}, ${hh.hour}, ${hh.approver}`;
+    const allRemainingHhs = await getAllRemainingHh(pool);
+    const replyMessage =
+      "❤️ ยอด HH คงเหลือแต่ละคน \n" +
+      allRemainingHhs
+        .map((detail) => {
+          return `- ${detail.member}: ${detail.remaining}h`;
         })
         .join("\n");
+    pushMsg(client, replyToken, replyMessage);
   }
-
-  await pushMsg(client, replyToken, replyMessage);
 }
 
 export async function updateApproveFlag(
@@ -249,19 +340,21 @@ export async function showListToday(
   const leaveDetails = rows as ILeaveSchedule[];
   const replyMessage =
     "✏️ คนที่ลาวันนี้\n___________\n" +
-    "🟢 approve แล้ว\n🔴 ยังไม่ approve\n___________\n" +
+    "🟢 approve แล้ว\n🟡 key & no approve\n🔴 ยังไม่ approve\n___________\n" +
     leaveDetails
       .map((detail) => {
-        return `${detail.is_approve ? "🟢" : "🔴"}<${detail.id}> ${
-          detail.member
-        } ${detail.leave_type} ${
+        return `${
+          detail.is_approve ? "🟢" : detail.status == "key" ? "🟡" : "🔴"
+        }<${detail.id}> ${detail.member} ${detail.leave_type} ${
           detail.leave_start_dt == detail.leave_end_dt
             ? convertDatetimeToDDMMM(detail.leave_start_dt)
             : convertDatetimeToDDMMM(detail.leave_start_dt) +
               "-" +
               convertDatetimeToDDMMM(detail.leave_end_dt)
         } ${detail.period_detail} ${detail.status} ${
-          detail.description == null ? "" : `(${detail.description})`
+          detail.description == null || detail.description == ""
+            ? ""
+            : `(${detail.description})`
         }`;
       })
       .join("\n");
@@ -311,21 +404,30 @@ export async function showMyList(
     order by leave_start_dt`
   );
   const leaveDetails = rows as ILeaveSchedule[];
+
+  // Get HH details
+  const remainingHh = await getRemainingHh(pool, member);
+
   const replyMessage =
     `✏️ รายการทั้งหมดของ ${member}\n___________\n` +
-    "🟢 approve แล้ว\n🔴 ยังไม่ approve\n___________\n" +
+    `❤️ hh คงเหลือ ${remainingHh} hours\
+    \n___________\n` +
+    "🟢 approved\n🟡 key & no approve \n🔴 no key & no approve\
+    \n___________\n" +
     leaveDetails
       .map((detail) => {
-        return `${detail.is_approve ? "🟢" : "🔴"}<${detail.id}> ${
-          detail.member
-        } ${detail.leave_type} ${
+        return `${
+          detail.is_approve ? "🟢" : detail.status == "key" ? "🟡" : "🔴"
+        }<${detail.id}> ${detail.member} ${detail.leave_type} ${
           detail.leave_start_dt == detail.leave_end_dt
             ? convertDatetimeToDDMMM(detail.leave_start_dt)
             : convertDatetimeToDDMMM(detail.leave_start_dt) +
               "-" +
               convertDatetimeToDDMMM(detail.leave_end_dt)
         } ${detail.period_detail} ${detail.status} ${
-          detail.description == null ? "" : `(${detail.description})`
+          detail.description == null || detail.description == ""
+            ? ""
+            : `(${detail.description})`
         }`;
       })
       .join("\n");

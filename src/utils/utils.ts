@@ -88,3 +88,9 @@ export function getCurrentWeekDate(
 
   return result;
 }
+
+export function getCurrentTimestamp(): string {
+  const currentDateTime = new Date();
+  const formattedDateTime = currentDateTime.toISOString();
+  return formattedDateTime;
+}

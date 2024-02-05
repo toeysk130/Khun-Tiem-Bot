@@ -1,7 +1,7 @@
 import axios from "axios";
 import * as dotenv from "dotenv";
 import pg from "pg";
-import { getListToday, getWaitApprove } from "./lineAPI";
+import { getListToday, getWaitApprove } from "./leaveScheduleAPI";
 
 // Setup
 dotenv.config();
