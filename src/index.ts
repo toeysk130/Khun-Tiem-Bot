@@ -18,11 +18,35 @@ app.use(bodyParser.text({ type: "text/html" }));
 // ------
 
 app.post("/webhook", async (req, res) => {
+  console.log(req.body.events[0].source);
   const events: WebhookEvent[] = req.body.events;
 
-  for (const event of events) {
-    if (event.type === "message") {
-      handleIncomingMessage(event);
+  // Get GroupID
+  const userId = req.body.events[0].source.userId;
+  const groupId = req.body.events[0].source.groupId;
+
+  if (
+    groupId !== undefined &&
+    [
+      "Ce79a461bc372cf44eaddb5a01f6fef7e",
+      "Ca904965536ee624589ac5c164fd34c88",
+    ].includes(groupId)
+  ) {
+    for (const event of events) {
+      if (event.type === "message") {
+        handleIncomingMessage(event);
+      }
+    }
+  } else if (
+    [
+      "Uf4e4f7069ba55bd6242f6ea09b27c346",
+      "U9802c8e71544d60ece2056b2405fd894",
+    ].includes(userId)
+  ) {
+    for (const event of events) {
+      if (event.type === "message") {
+        handleIncomingMessage(event);
+      }
     }
   }
   res.sendStatus(200);
