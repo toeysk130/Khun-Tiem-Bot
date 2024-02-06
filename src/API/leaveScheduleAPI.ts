@@ -502,7 +502,7 @@ export async function getListToday(pool: pg.Pool) {
   const leaveDetails = rows as ILeaveSchedule[];
   const replyMessage =
     "✏️ คนที่ลาวันนี้\n___________\n" +
-    "🟢 approve แล้ว\n🔴 ยังไม่ approve\n___________\n" +
+    "🟢 approve แล้ว\n🟡 key & no approve\n🔴 ยังไม่ approve\n___________\n" +
     leaveDetails
       .map((detail) => {
         return `${detail.is_approve ? "🟢" : "🔴"}<${detail.id}> ${
@@ -533,7 +533,9 @@ export async function getWaitApprove(pool: pg.Pool) {
     "✏️ รายการที่ยังรอ Approve\n\n" +
     leaveDetails
       .map((detail) => {
-        return `🔴<${detail.id}> ${detail.member} ${detail.leave_type} ${
+        return `${
+          detail.is_approve ? "🟢" : detail.status == "key" ? "🟡" : "🔴"
+        }<${detail.id}> ${detail.member} ${detail.leave_type} ${
           detail.leave_start_dt == detail.leave_end_dt
             ? convertDatetimeToDDMMM(detail.leave_start_dt)
             : convertDatetimeToDDMMM(detail.leave_start_dt) +
