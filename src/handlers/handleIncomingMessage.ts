@@ -5,6 +5,7 @@ import { validateLeaveRequest } from "../utils/validateLeaveReq";
 import {
   addNewHhLeaveRequest,
   addNewLeaveRequest,
+  addNewNcLeaveRequest,
   checkIfIdExist,
   checkIfMyIdExist,
   getMemberDetails,
@@ -76,7 +77,8 @@ export async function handleIncomingMessage(event: WebhookEvent) {
 
   if (command == "คำสั่ง") {
     const replyMessage = `🤖 รายการคำสั่ง\
-      \n👉แจ้งลา <ลาพักร้อน, ลาป่วย, ลากิจ, อบรม> <วันเริ่มลา 26JAN,26JAN-28JAN> <จำนวน 1วัน, 3วัน, ครึ่งเช้า, ครึ่งบ่าย> <key,nokey> <เหตุผล>\
+      \n👉แจ้งลา <ลาพักร้อน, ลาป่วย, ลากิจ> <วันเริ่มลา 26JAN,26JAN-28JAN> <จำนวน 1วัน, 3วัน, ครึ่งเช้า, ครึ่งบ่าย> <key,nokey> <เหตุผล>\
+      \n👉nc <อบรม, training, กิจกรรมบริษัท> <วันเริ่มลา 26JAN,26JAN-28JAN> <จำนวน 1วัน, 3วัน, ครึ่งเช้า, ครึ่งบ่าย> <เหตุผล>\
       \n👉อัปเดต <id> <key,nokey>\
       \n👉hh ใช้ <1h,2h,...,40h> <วันลา 26JAN> <1วัน, 3วัน, ครึ่งเช้า, ครึ่งบ่าย> <เหตุผล>\
       \n👉hh เพิ่ม <1h,2h,...,40h> <เหตุผล>\
@@ -123,6 +125,20 @@ export async function handleIncomingMessage(event: WebhookEvent) {
       return;
 
     await addNewLeaveRequest(pool, client, replyToken, member, commandArr);
+  } else if (command == "nc") {
+    if (
+      !(await validateLeaveRequest(
+        pool,
+        client,
+        member.name,
+        commandArr,
+        commandLen,
+        replyToken
+      ))
+    )
+      return;
+
+    await addNewNcLeaveRequest(pool, client, replyToken, member, commandArr);
   }
 
   // เตือน <รายวัน, approve>

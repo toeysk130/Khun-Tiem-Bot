@@ -115,6 +115,83 @@ export async function addNewLeaveRequest(
   await callQuery(pool, client, replyToken, query, values, successMsg, failMsg);
 }
 
+export async function addNewNcLeaveRequest(
+  pool: pg.Pool,
+  client: Client,
+  replyToken: string,
+  member: IMember,
+  commandArr: string[]
+) {
+  const leaveKey = "key";
+  const isApprove = true;
+  const leaveType = commandArr[1];
+  const leaveStartDate = commandArr[2];
+  const leaveAmount = commandArr[3];
+  const description = commandArr.slice(4).join(" ");
+
+  let formattedLeaveStartDate = "";
+  let formattedLeaveEndDate = "";
+  let formattedLeaveAmount = 0;
+
+  // ลาภายในวันเดียว
+  if (leaveStartDate.length == 5) {
+    const month = leaveStartDate.slice(-3);
+    // Parse the date strings manually
+    const firstDay = parseInt(leaveStartDate.slice(0, 2));
+    const firstMonth = monthAbbreviations[leaveStartDate.slice(2, 5)];
+    const firstYear = new Date().getUTCFullYear();
+    formattedLeaveStartDate = new Date(
+      Date.UTC(firstYear, firstMonth, firstDay)
+    ).toISOString();
+    formattedLeaveEndDate = formattedLeaveStartDate;
+    formattedLeaveAmount = LeaveAmountMap[leaveAmount];
+  }
+
+  // ลาหลายวัน
+  if (leaveStartDate.length == 11) {
+    const dates = leaveStartDate.split("-");
+    const startDate = dates[0];
+    const endDate = dates[1];
+
+    // Parse the date strings manually
+    const firstDay = parseInt(startDate.slice(0, 2));
+    const firstMonth = monthAbbreviations[startDate.slice(2, 5)];
+    const firstYear = new Date().getUTCFullYear();
+
+    const secondDay = parseInt(endDate.slice(0, 2));
+    const secondMonth = monthAbbreviations[endDate.slice(2, 5)];
+    const secondYear = new Date().getUTCFullYear();
+
+    formattedLeaveStartDate = new Date(
+      Date.UTC(firstYear, firstMonth, firstDay)
+    ).toISOString();
+    formattedLeaveEndDate = new Date(
+      Date.UTC(secondYear, secondMonth, secondDay)
+    ).toISOString();
+    formattedLeaveAmount = LeaveAmountMap[leaveAmount];
+  }
+
+  const formattedDateTime = getCurrentTimestamp();
+  const query = `INSERT INTO leave_schedule (datetime, member, leave_type, leave_start_dt, leave_end_dt, leave_period, period_detail, status, description, is_approve) \
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);`;
+
+  const values = [
+    formattedDateTime,
+    member.name,
+    leaveType,
+    formattedLeaveStartDate,
+    formattedLeaveEndDate,
+    formattedLeaveAmount,
+    leaveAmount,
+    leaveKey,
+    description,
+    isApprove,
+  ];
+  const successMsg = `🥰 Added new leave request for ${member.name} successfully`;
+  const failMsg = `😥 Failed to add new leave request for ${member.name}`;
+  await callQuery(pool, client, replyToken, query, values, successMsg, failMsg);
+}
+
 export async function addNewHhLeaveRequest(
   pool: pg.Pool,
   client: Client,

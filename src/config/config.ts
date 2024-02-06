@@ -10,7 +10,9 @@ export const validReportTypes = [
 
 export const validHhTypes = ["เพิ่ม", "ใช้"];
 
-export const validLeaveTypes = ["ลาพักร้อน", "ลาป่วย", "ลากิจ", "อบรม"];
+export const validLeaveTypes = ["ลาพักร้อน", "ลาป่วย", "ลากิจ"];
+
+export const ncTypes = ["อบรม", "training", "กิจกรรมบริษัท"];
 
 export const tableLists = ["member", "happy_hour", "leave_schedule"];
 

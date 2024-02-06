@@ -1,6 +1,6 @@
 import { Client } from "@line/bot-sdk";
 import pg from "pg";
-import { validLeaveTypes } from "../config/config";
+import { ncTypes, validLeaveTypes } from "../config/config";
 import { pushMsg } from "../API/leaveScheduleAPI";
 import { validateInputDate } from "./validateCommon";
 
@@ -12,12 +12,20 @@ export async function validateLeaveRequest(
   commandLen: number,
   replyToken: string
 ): Promise<boolean> {
+  const command = commandArr[0];
   const leaveType = commandArr[1];
   const leaveStartDate = commandArr[2];
   const leaveAmount = commandArr[3];
-  const leaveKey = commandArr[4];
+  const leaveKey = command == "nc" ? "key" : commandArr[4];
 
-  if (!validLeaveTypes.includes(leaveType)) {
+  if (command == "แจ้งลา" && !validLeaveTypes.includes(leaveType)) {
+    const replyMessage = `⚠️ ประเภทวันลา '${leaveType}' ไม่มีในระบบ\
+      \n✅ ตัวเลือกที่มี ${validLeaveTypes.join(" ")}`;
+    await pushMsg(client, replyToken, replyMessage);
+    return false;
+  }
+
+  if (command == "nc" && !ncTypes.includes(leaveType)) {
     const replyMessage = `⚠️ ประเภทวันลา '${leaveType}' ไม่มีในระบบ\
       \n✅ ตัวเลือกที่มี ${validLeaveTypes.join(" ")}`;
     await pushMsg(client, replyToken, replyMessage);
