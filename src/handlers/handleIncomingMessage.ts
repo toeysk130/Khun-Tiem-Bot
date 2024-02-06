@@ -32,7 +32,7 @@ import {
   getCurrentWeekDate,
   getNextWeektDateString,
 } from "../utils/utils";
-import { pushMessage } from "../API/pushMessage";
+import { pushMessage, pushSingleMessage } from "../API/pushMessage";
 import { validateHhRequest } from "../utils/validateHhReq";
 import { addHhRecord } from "../API/hhAPI";
 
@@ -330,5 +330,8 @@ export async function handleIncomingMessage(event: WebhookEvent) {
     }
     const name = commandArr[1];
     await showMyList(pool, client, name, replyToken);
+  } else if (command == "ฝากด่า") {
+    const description = commandArr.slice(1).join(" ");
+    await pushSingleMessage(description);
   }
 }

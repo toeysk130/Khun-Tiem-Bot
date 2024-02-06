@@ -18,8 +18,9 @@ app.use(bodyParser.text({ type: "text/html" }));
 // ------
 
 app.post("/webhook", async (req, res) => {
-  console.log(req.body.events[0].source);
   const events: WebhookEvent[] = req.body.events;
+
+  if (req.body.events.length === 0) return res.sendStatus(200);
 
   // Get GroupID
   const userId = req.body.events[0].source.userId;
