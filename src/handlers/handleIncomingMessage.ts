@@ -35,6 +35,7 @@ import {
 import { pushMessage, pushSingleMessage } from "../API/pushMessage";
 import { validateHhRequest } from "../utils/validateHhReq";
 import { addHhRecord } from "../API/hhAPI";
+import { fetchOpenAICompletion } from "../API/chatGpt";
 
 dotenv.config();
 const pool = new pg.Pool();
@@ -333,5 +334,8 @@ export async function handleIncomingMessage(event: WebhookEvent) {
   } else if (command == "ฝากด่า") {
     const description = commandArr.slice(1).join(" ");
     await pushSingleMessage(description);
+  } else if (command == "ขุนเทียม") {
+    const description = commandArr.slice(1).join(" ");
+    await fetchOpenAICompletion(description);
   }
 }
