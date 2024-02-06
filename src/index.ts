@@ -38,12 +38,7 @@ app.post("/webhook", async (req, res) => {
         handleIncomingMessage(event);
       }
     }
-  } else if (
-    [
-      "Uf4e4f7069ba55bd6242f6ea09b27c346",
-      "U9802c8e71544d60ece2056b2405fd894",
-    ].includes(userId)
-  ) {
+  } else if (["Uf4e4f7069ba55bd6242f6ea09b27c346"].includes(userId)) {
     for (const event of events) {
       if (event.type === "message") {
         handleIncomingMessage(event);
