@@ -1,7 +1,7 @@
 import * as dotenv from "dotenv";
 import { Client, TextEventMessage, WebhookEvent } from "@line/bot-sdk";
 import pg from "pg";
-import { validateLeaveRequest } from "../utils/validateLeaveReq";
+import { validateLeaveRequest } from "../validation/validateLeaveReq";
 import {
   addNewHhLeaveRequest,
   addNewLeaveRequest,
@@ -21,6 +21,7 @@ import {
 import {
   daysColor,
   tableLists,
+  validBotCommands,
   validHhTypes,
   validKeyStatus,
   validReportTypes,
@@ -33,7 +34,7 @@ import {
   getNextWeektDateString,
 } from "../utils/utils";
 import { pushMessage, pushSingleMessage } from "../API/pushMessage";
-import { validateHhRequest } from "../utils/validateHhReq";
+import { validateHhRequest } from "../validation/validateHhReq";
 import { addHhRecord } from "../API/hhAPI";
 import { fetchOpenAICompletion } from "../API/chatGpt";
 import { pushMsg } from "../utils/sendLineMsg";
@@ -55,6 +56,9 @@ export async function handleIncomingMessage(event: WebhookEvent) {
   const commandArr = receivedText.split(" ");
   const command = commandArr[0];
   const commandLen = commandArr.length;
+
+  // Ignore messages that not be bot commands
+  if (!validBotCommands.includes(command)) return;
 
   const userId = event.source.userId;
   const userName = commandArr[1];
@@ -86,7 +90,6 @@ export async function handleIncomingMessage(event: WebhookEvent) {
       \n👉รายงาน/รายการ <ของฉัน, วันนี้, วีคนี้, วีคหน้า>\
       \n👉เตือน <approve> <'',key,nokey>\
       \n👉approve <id, ids(8,9)> (⛔ Only Admin)\
-      \n👉ตาราง <member, happy_hour> (⛔ Only Admin)\
       \n👉แอบดู <ชื่อคน> (⛔ Only Admin)\
       \n👉สมัคร <ชื่อ>\
       `;
@@ -298,22 +301,6 @@ export async function handleIncomingMessage(event: WebhookEvent) {
   } else if (command == "hh") {
     const hhType = commandArr[1]; // "เพิ่ม", "ใช้"
     const hhAmt = commandArr[2]; // 1h,2h,...,40h
-
-    if (!validHhTypes.includes(hhType)) {
-      // "เพิ่ม", "ใช้"
-      const replyMessage = `⚠️ ประเภท hh '${hhType}' ไม่มีในระบบ\
-      \n✅ ตัวเลือกที่มี '${validHhTypes.join(", ")}'`;
-      await pushMsg(client, replyToken, replyMessage);
-      return;
-    }
-
-    if (!validhhAmts.includes(hhAmt)) {
-      // 1h,2h,...,40h
-      const replyMessage = `⚠️ จำนวน hh '${hhAmt}' ไม่มีในระบบ\
-      \n✅ ตัวเลือกที่มี '1h,2h,...,40h'`;
-      await pushMsg(client, replyToken, replyMessage);
-      return;
-    }
 
     if (hhType == "เพิ่ม") {
       const description = commandArr.slice(3).join(" "); // other elements will be description

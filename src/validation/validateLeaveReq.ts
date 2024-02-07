@@ -2,7 +2,7 @@ import { Client } from "@line/bot-sdk";
 import pg from "pg";
 import { ncTypes, validLeaveTypes } from "../config/config";
 import { validateInputDate } from "./validateCommon";
-import { pushMsg } from "./sendLineMsg";
+import { pushMsg } from "../utils/sendLineMsg";
 
 export async function validateLeaveRequest(
   pool: pg.Pool,

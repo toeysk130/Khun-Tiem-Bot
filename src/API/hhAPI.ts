@@ -1,5 +1,5 @@
-import { Client } from "@line/bot-sdk";
 import pg from "pg";
+import { Client } from "@line/bot-sdk";
 import { getCurrentTimestamp } from "../utils/utils";
 import { IAllRemaiHH } from "../config/interface";
 
@@ -55,7 +55,7 @@ export async function getRemainingHh(pool: pg.Pool, member: string) {
   FROM
       happy_hour
   WHERE
-      "member" = '${member}';
+      "member" = '${member}' and is_approve is true;
   `;
   const { rows } = await pool.query(selectQuery);
   const happyHour = rows[0];

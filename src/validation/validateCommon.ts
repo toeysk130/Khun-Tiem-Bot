@@ -7,7 +7,7 @@ import {
   validLeaveAmounts,
   validUpcaseMonths,
 } from "../config/config";
-import { pushMsg } from "./sendLineMsg";
+import { pushMsg } from "../utils/sendLineMsg";
 
 export async function validateInputDate(
   pool: pg.Pool,
