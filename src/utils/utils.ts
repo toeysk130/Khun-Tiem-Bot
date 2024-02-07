@@ -1,24 +1,12 @@
-import { daysOfWeek } from "../config/config";
+import {
+  LeaveAmountMap,
+  daysOfWeek,
+  monthAbbreviations,
+} from "../config/config";
 
 export function convertDatetimeToDDMMM(inputDateString: string): string {
   // Parse the input date string
   const date = new Date(inputDateString);
-
-  // Define an array for month abbreviations
-  const monthAbbreviations = [
-    "JAN",
-    "FEB",
-    "MAR",
-    "APR",
-    "MAY",
-    "JUN",
-    "JUL",
-    "AUG",
-    "SEP",
-    "OCT",
-    "NOV",
-    "DEC",
-  ];
 
   // Extract day and month components from the date
   const day = date.getUTCDate();
@@ -93,4 +81,73 @@ export function getCurrentTimestamp(): string {
   const currentDateTime = new Date();
   const formattedDateTime = currentDateTime.toISOString();
   return formattedDateTime;
+}
+
+export function getFormatLeaveDate(
+  leaveStartDate: string,
+  leaveAmount: string
+) {
+  // Initial variables
+  let formattedLeaveStartDate = "";
+  let formattedLeaveEndDate = "";
+  let formattedLeaveAmount = 0;
+
+  // ลาภายในวันเดียว
+  if (leaveStartDate.length == 5) {
+    const month = leaveStartDate.slice(-3);
+    // Parse the date strings manually
+    const firstDay = parseInt(leaveStartDate.slice(0, 2));
+    const firstMonth = monthAbbreviations[leaveStartDate.slice(2, 5)];
+    const firstYear = new Date().getUTCFullYear();
+    formattedLeaveStartDate = new Date(
+      Date.UTC(firstYear, firstMonth, firstDay)
+    ).toISOString();
+    formattedLeaveEndDate = formattedLeaveStartDate;
+    formattedLeaveAmount = LeaveAmountMap[leaveAmount];
+  }
+
+  // ลาหลายวัน
+  if (leaveStartDate.length == 11) {
+    const dates = leaveStartDate.split("-");
+    const startDate = dates[0];
+    const endDate = dates[1];
+
+    // Parse the date strings manually
+    const firstDay = parseInt(startDate.slice(0, 2));
+    const firstMonth = monthAbbreviations[startDate.slice(2, 5)];
+    const firstYear = new Date().getUTCFullYear();
+
+    const secondDay = parseInt(endDate.slice(0, 2));
+    const secondMonth = monthAbbreviations[endDate.slice(2, 5)];
+    const secondYear = new Date().getUTCFullYear();
+
+    formattedLeaveStartDate = new Date(
+      Date.UTC(firstYear, firstMonth, firstDay)
+    ).toISOString();
+    formattedLeaveEndDate = new Date(
+      Date.UTC(secondYear, secondMonth, secondDay)
+    ).toISOString();
+    formattedLeaveAmount = LeaveAmountMap[leaveAmount];
+  }
+
+  return {
+    formattedLeaveStartDate,
+    formattedLeaveEndDate,
+    formattedLeaveAmount,
+  };
+}
+
+export function getColorEmoji(is_approve: boolean, status: string): string {
+  return is_approve ? "🟢" : status == "key" ? "🟡" : "🔴";
+}
+
+export function getDisplayLeaveDate(
+  leave_start_dt: string,
+  leave_end_dt: string
+): string {
+  return leave_start_dt == leave_end_dt
+    ? convertDatetimeToDDMMM(leave_start_dt)
+    : convertDatetimeToDDMMM(leave_start_dt) +
+        "-" +
+        convertDatetimeToDDMMM(leave_end_dt);
 }

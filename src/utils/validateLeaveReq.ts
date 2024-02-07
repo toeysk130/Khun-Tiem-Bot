@@ -1,8 +1,8 @@
 import { Client } from "@line/bot-sdk";
 import pg from "pg";
 import { ncTypes, validLeaveTypes } from "../config/config";
-import { pushMsg } from "../API/leaveScheduleAPI";
 import { validateInputDate } from "./validateCommon";
+import { pushMsg } from "./sendLineMsg";
 
 export async function validateLeaveRequest(
   pool: pg.Pool,

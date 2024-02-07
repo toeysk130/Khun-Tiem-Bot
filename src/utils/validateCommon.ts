@@ -1,16 +1,13 @@
 import { Client } from "@line/bot-sdk";
 import pg from "pg";
-import {
-  getIsLeaveDuplicate,
-  pushMsg,
-  updateKeyStatus,
-} from "../API/leaveScheduleAPI";
+import { getIsLeaveDuplicate, updateKeyStatus } from "../API/leaveScheduleAPI";
 import {
   monthAbbreviations,
   validKeyStatus,
   validLeaveAmounts,
   validMonths,
 } from "../config/config";
+import { pushMsg } from "./sendLineMsg";
 
 export async function validateInputDate(
   pool: pg.Pool,

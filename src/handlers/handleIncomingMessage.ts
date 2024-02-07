@@ -9,7 +9,6 @@ import {
   checkIfIdExist,
   checkIfMyIdExist,
   getMemberDetails,
-  pushMsg,
   registerNewMember,
   showListThisWeek,
   showListToday,
@@ -37,8 +36,10 @@ import { pushMessage, pushSingleMessage } from "../API/pushMessage";
 import { validateHhRequest } from "../utils/validateHhReq";
 import { addHhRecord } from "../API/hhAPI";
 import { fetchOpenAICompletion } from "../API/chatGpt";
+import { pushMsg } from "../utils/sendLineMsg";
 
 dotenv.config();
+
 const pool = new pg.Pool();
 const client = new Client({
   channelSecret: process.env.CHANNEL_SECRET || "",
@@ -307,7 +308,7 @@ export async function handleIncomingMessage(event: WebhookEvent) {
     }
 
     if (!validhhAmts.includes(hhAmt)) {
-      // 1h,2h,...,40h-
+      // 1h,2h,...,40h
       const replyMessage = `⚠️ จำนวน hh '${hhAmt}' ไม่มีในระบบ\
       \n✅ ตัวเลือกที่มี '1h,2h,...,40h'`;
       await pushMsg(client, replyToken, replyMessage);

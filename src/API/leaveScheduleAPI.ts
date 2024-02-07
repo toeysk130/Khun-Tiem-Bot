@@ -1,22 +1,20 @@
 import { Client } from "@line/bot-sdk";
 import pg from "pg";
-import { IHappyHour, ILeaveSchedule, IMember } from "../config/interface";
+import { ILeaveSchedule, IMember } from "../config/interface";
 import { LeaveAmountMap, monthAbbreviations } from "../config/config";
 import {
   convertDatetimeToDDMMM,
+  getColorEmoji,
   getCurrentDateString,
   getCurrentTimestamp,
+  getDisplayLeaveDate,
+  getFormatLeaveDate,
 } from "../utils/utils";
 import { delHhRecord, getAllRemainingHh, getRemainingHh } from "./hhAPI";
+import { pushMsg } from "../utils/sendLineMsg";
+import { callQuery } from "../utils/query";
 
 const LEAVE_SCHEDULE_COLUMNS = `id, datetime, member, leave_type, medical_cert, status, leave_start_dt::text, leave_end_dt::text, leave_period, period_detail, is_approve, description`;
-
-export async function pushMsg(client: Client, replyToken: string, msg: string) {
-  await client.replyMessage(replyToken, {
-    type: "text",
-    text: msg,
-  });
-}
 
 export async function getMemberDetails(
   pool: pg.Pool,
@@ -53,47 +51,11 @@ export async function addNewLeaveRequest(
     commandArr;
   const description = descriptions.join(" ");
 
-  let formattedLeaveStartDate = "";
-  let formattedLeaveEndDate = "";
-  let formattedLeaveAmount = 0;
-
-  // ลาภายในวันเดียว
-  if (leaveStartDate.length == 5) {
-    const month = leaveStartDate.slice(-3);
-    // Parse the date strings manually
-    const firstDay = parseInt(leaveStartDate.slice(0, 2));
-    const firstMonth = monthAbbreviations[leaveStartDate.slice(2, 5)];
-    const firstYear = new Date().getUTCFullYear();
-    formattedLeaveStartDate = new Date(
-      Date.UTC(firstYear, firstMonth, firstDay)
-    ).toISOString();
-    formattedLeaveEndDate = formattedLeaveStartDate;
-    formattedLeaveAmount = LeaveAmountMap[leaveAmount];
-  }
-
-  // ลาหลายวัน
-  if (leaveStartDate.length == 11) {
-    const dates = leaveStartDate.split("-");
-    const startDate = dates[0];
-    const endDate = dates[1];
-
-    // Parse the date strings manually
-    const firstDay = parseInt(startDate.slice(0, 2));
-    const firstMonth = monthAbbreviations[startDate.slice(2, 5)];
-    const firstYear = new Date().getUTCFullYear();
-
-    const secondDay = parseInt(endDate.slice(0, 2));
-    const secondMonth = monthAbbreviations[endDate.slice(2, 5)];
-    const secondYear = new Date().getUTCFullYear();
-
-    formattedLeaveStartDate = new Date(
-      Date.UTC(firstYear, firstMonth, firstDay)
-    ).toISOString();
-    formattedLeaveEndDate = new Date(
-      Date.UTC(secondYear, secondMonth, secondDay)
-    ).toISOString();
-    formattedLeaveAmount = LeaveAmountMap[leaveAmount];
-  }
+  const {
+    formattedLeaveStartDate,
+    formattedLeaveEndDate,
+    formattedLeaveAmount,
+  } = getFormatLeaveDate(leaveStartDate, leaveAmount);
 
   const formattedDateTime = getCurrentTimestamp();
   const query = `INSERT INTO leave_schedule (datetime, member, leave_type, leave_start_dt, leave_end_dt, leave_period, period_detail, status, description) \
@@ -129,47 +91,11 @@ export async function addNewNcLeaveRequest(
   const leaveAmount = commandArr[3];
   const description = commandArr.slice(4).join(" ");
 
-  let formattedLeaveStartDate = "";
-  let formattedLeaveEndDate = "";
-  let formattedLeaveAmount = 0;
-
-  // ลาภายในวันเดียว
-  if (leaveStartDate.length == 5) {
-    const month = leaveStartDate.slice(-3);
-    // Parse the date strings manually
-    const firstDay = parseInt(leaveStartDate.slice(0, 2));
-    const firstMonth = monthAbbreviations[leaveStartDate.slice(2, 5)];
-    const firstYear = new Date().getUTCFullYear();
-    formattedLeaveStartDate = new Date(
-      Date.UTC(firstYear, firstMonth, firstDay)
-    ).toISOString();
-    formattedLeaveEndDate = formattedLeaveStartDate;
-    formattedLeaveAmount = LeaveAmountMap[leaveAmount];
-  }
-
-  // ลาหลายวัน
-  if (leaveStartDate.length == 11) {
-    const dates = leaveStartDate.split("-");
-    const startDate = dates[0];
-    const endDate = dates[1];
-
-    // Parse the date strings manually
-    const firstDay = parseInt(startDate.slice(0, 2));
-    const firstMonth = monthAbbreviations[startDate.slice(2, 5)];
-    const firstYear = new Date().getUTCFullYear();
-
-    const secondDay = parseInt(endDate.slice(0, 2));
-    const secondMonth = monthAbbreviations[endDate.slice(2, 5)];
-    const secondYear = new Date().getUTCFullYear();
-
-    formattedLeaveStartDate = new Date(
-      Date.UTC(firstYear, firstMonth, firstDay)
-    ).toISOString();
-    formattedLeaveEndDate = new Date(
-      Date.UTC(secondYear, secondMonth, secondDay)
-    ).toISOString();
-    formattedLeaveAmount = LeaveAmountMap[leaveAmount];
-  }
+  const {
+    formattedLeaveStartDate,
+    formattedLeaveEndDate,
+    formattedLeaveAmount,
+  } = getFormatLeaveDate(leaveStartDate, leaveAmount);
 
   const formattedDateTime = getCurrentTimestamp();
   const query = `INSERT INTO leave_schedule (datetime, member, leave_type, leave_start_dt, leave_end_dt, leave_period, period_detail, status, description, is_approve) \
@@ -207,47 +133,11 @@ export async function addNewHhLeaveRequest(
   const leaveAmount = commandArr[4];
   const description = commandArr.slice(5).join(" ");
 
-  let formattedLeaveStartDate = "";
-  let formattedLeaveEndDate = "";
-  let formattedLeaveAmount = 0;
-
-  // ลาภายในวันเดียว
-  if (leaveStartDate.length == 5) {
-    const month = leaveStartDate.slice(-3);
-    // Parse the date strings manually
-    const firstDay = parseInt(leaveStartDate.slice(0, 2));
-    const firstMonth = monthAbbreviations[leaveStartDate.slice(2, 5)];
-    const firstYear = new Date().getUTCFullYear();
-    formattedLeaveStartDate = new Date(
-      Date.UTC(firstYear, firstMonth, firstDay)
-    ).toISOString();
-    formattedLeaveEndDate = formattedLeaveStartDate;
-    formattedLeaveAmount = LeaveAmountMap[leaveAmount];
-  }
-
-  // ลาหลายวัน
-  if (leaveStartDate.length == 11) {
-    const dates = leaveStartDate.split("-");
-    const startDate = dates[0];
-    const endDate = dates[1];
-
-    // Parse the date strings manually
-    const firstDay = parseInt(startDate.slice(0, 2));
-    const firstMonth = monthAbbreviations[startDate.slice(2, 5)];
-    const firstYear = new Date().getUTCFullYear();
-
-    const secondDay = parseInt(endDate.slice(0, 2));
-    const secondMonth = monthAbbreviations[endDate.slice(2, 5)];
-    const secondYear = new Date().getUTCFullYear();
-
-    formattedLeaveStartDate = new Date(
-      Date.UTC(firstYear, firstMonth, firstDay)
-    ).toISOString();
-    formattedLeaveEndDate = new Date(
-      Date.UTC(secondYear, secondMonth, secondDay)
-    ).toISOString();
-    formattedLeaveAmount = LeaveAmountMap[leaveAmount];
-  }
+  const {
+    formattedLeaveStartDate,
+    formattedLeaveEndDate,
+    formattedLeaveAmount,
+  } = getFormatLeaveDate(leaveStartDate, leaveAmount);
 
   const formattedDateTime = getCurrentTimestamp();
   const query = `INSERT INTO leave_schedule (datetime, member, leave_type, leave_start_dt, leave_end_dt, leave_period, period_detail, status, description, is_approve) \
@@ -270,44 +160,21 @@ export async function addNewHhLeaveRequest(
     await pool.query(query, values);
     await delHhRecord(pool, member.name, parseInt(hhAmt), description);
   } catch (error) {
-    console.error("Error inserting data:", error);
-    await client.replyMessage(replyToken, {
-      type: "text",
-      text: `😥 Failed to add new leave request for ${member.name}`,
-    });
+    console.error(error);
+    await pushMsg(
+      client,
+      replyToken,
+      `😥 Failed to add new leave request for ${member.name}`
+    );
   }
   const remaining = await getRemainingHh(pool, member.name);
-  await client.replyMessage(replyToken, {
-    type: "text",
-    text: `❤️‍🔥 ใช้ hh สำหรับ ${member.name} สำเร็จ คงเหลือ: ${remaining} hours\
-    ${remaining < 0 ? "\n😱 เห้ยๆ ติดลบแล้วนะเฮ้ย!!!!!!!!!!!!!" : ""}`,
-  });
+  await pushMsg(
+    client,
+    replyToken,
+    `❤️‍🔥 ใช้ hh สำหรับ ${member.name} สำเร็จ คงเหลือ: ${remaining} hours\
+  ${remaining < 0 ? "\n😱 เห้ยๆ ติดลบแล้วนะเฮ้ย!!!!!!!!!!!!!" : ""}`
+  );
 }
-
-export async function callQuery(
-  pool: pg.Pool,
-  client: Client,
-  replyToken: string,
-  query: string,
-  value: any[],
-  successMsg: string,
-  failMsg: string
-) {
-  try {
-    await pool.query(query, value);
-    await client.replyMessage(replyToken, {
-      type: "text",
-      text: successMsg,
-    });
-  } catch (error) {
-    console.error("Error inserting data:", error);
-    await client.replyMessage(replyToken, {
-      type: "text",
-      text: failMsg,
-    });
-  }
-}
-
 export async function showWaitApprove(
   pool: pg.Pool,
   client: Client,
@@ -329,15 +196,13 @@ export async function showWaitApprove(
     }\n\n` +
     leaveDetails
       .map((detail) => {
-        return `${detail.status == "key" ? "🟡" : "🔴"}<${detail.id}> [${
-          detail.status
-        }] ${detail.member} ${detail.leave_type} ${
-          detail.leave_start_dt == detail.leave_end_dt
-            ? convertDatetimeToDDMMM(detail.leave_start_dt)
-            : convertDatetimeToDDMMM(detail.leave_start_dt) +
-              "-" +
-              convertDatetimeToDDMMM(detail.leave_end_dt)
-        } ${detail.period_detail}`;
+        return `${getColorEmoji(detail.is_approve, detail.status)}<${
+          detail.id
+        }> [${detail.status}] ${detail.member} ${
+          detail.leave_type
+        } ${getDisplayLeaveDate(detail.leave_start_dt, detail.leave_end_dt)} ${
+          detail.period_detail
+        }`;
       })
       .join("\n");
 
@@ -420,15 +285,12 @@ export async function showListToday(
     "🟢 approve แล้ว\n🟡 key & no approve\n🔴 ยังไม่ approve\n___________\n" +
     leaveDetails
       .map((detail) => {
-        return `${
-          detail.is_approve ? "🟢" : detail.status == "key" ? "🟡" : "🔴"
-        }<${detail.id}> ${detail.member} ${detail.leave_type} ${
-          detail.leave_start_dt == detail.leave_end_dt
-            ? convertDatetimeToDDMMM(detail.leave_start_dt)
-            : convertDatetimeToDDMMM(detail.leave_start_dt) +
-              "-" +
-              convertDatetimeToDDMMM(detail.leave_end_dt)
-        } ${detail.period_detail} ${detail.status} ${
+        return `${getColorEmoji(detail.is_approve, detail.status)}<${
+          detail.id
+        }> ${detail.member} ${detail.leave_type} ${getDisplayLeaveDate(
+          detail.leave_start_dt,
+          detail.leave_end_dt
+        )} ${detail.period_detail} ${detail.status} ${
           detail.description == null || detail.description == ""
             ? ""
             : `(${detail.description})`
@@ -493,15 +355,12 @@ export async function showMyList(
     \n___________\n" +
     leaveDetails
       .map((detail) => {
-        return `${
-          detail.is_approve ? "🟢" : detail.status == "key" ? "🟡" : "🔴"
-        }<${detail.id}> ${detail.member} ${detail.leave_type} ${
-          detail.leave_start_dt == detail.leave_end_dt
-            ? convertDatetimeToDDMMM(detail.leave_start_dt)
-            : convertDatetimeToDDMMM(detail.leave_start_dt) +
-              "-" +
-              convertDatetimeToDDMMM(detail.leave_end_dt)
-        } ${detail.period_detail} ${detail.status} ${
+        return `${getColorEmoji(detail.is_approve, detail.status)}<${
+          detail.id
+        }> ${detail.member} ${detail.leave_type} ${getDisplayLeaveDate(
+          detail.leave_start_dt,
+          detail.leave_end_dt
+        )} ${detail.period_detail} ${detail.status} ${
           detail.description == null || detail.description == ""
             ? ""
             : `(${detail.description})`
@@ -582,15 +441,12 @@ export async function getListToday(pool: pg.Pool) {
     "🟢 approve แล้ว\n🟡 key & no approve\n🔴 ยังไม่ approve\n___________\n" +
     leaveDetails
       .map((detail) => {
-        return `${detail.is_approve ? "🟢" : "🔴"}<${detail.id}> ${
-          detail.member
-        } ${detail.leave_type} ${
-          detail.leave_start_dt == detail.leave_end_dt
-            ? convertDatetimeToDDMMM(detail.leave_start_dt)
-            : convertDatetimeToDDMMM(detail.leave_start_dt) +
-              "-" +
-              convertDatetimeToDDMMM(detail.leave_end_dt)
-        } ${detail.period_detail} ${detail.status}`;
+        return `${getColorEmoji(detail.is_approve, detail.status)}<${
+          detail.id
+        }> ${detail.member} ${detail.leave_type} ${getDisplayLeaveDate(
+          detail.leave_start_dt,
+          detail.leave_end_dt
+        )} ${detail.period_detail} ${detail.status}`;
       })
       .join("\n");
 
@@ -610,15 +466,12 @@ export async function getWaitApprove(pool: pg.Pool) {
     "✏️ รายการที่ยังรอ Approve\n\n" +
     leaveDetails
       .map((detail) => {
-        return `${
-          detail.is_approve ? "🟢" : detail.status == "key" ? "🟡" : "🔴"
-        }<${detail.id}> ${detail.member} ${detail.leave_type} ${
-          detail.leave_start_dt == detail.leave_end_dt
-            ? convertDatetimeToDDMMM(detail.leave_start_dt)
-            : convertDatetimeToDDMMM(detail.leave_start_dt) +
-              "-" +
-              convertDatetimeToDDMMM(detail.leave_end_dt)
-        } ${detail.period_detail} ${detail.status}`;
+        return `${getColorEmoji(detail.is_approve, detail.status)}<${
+          detail.id
+        }> ${detail.member} ${detail.leave_type} ${getDisplayLeaveDate(
+          detail.leave_start_dt,
+          detail.leave_end_dt
+        )} ${detail.period_detail} ${detail.status}`;
       })
       .join("\n");
 
