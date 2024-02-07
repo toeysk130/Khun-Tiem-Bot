@@ -322,6 +322,9 @@ export async function getIsLeaveDuplicate(
   startDate: string,
   endDate: string
 ) {
+  console.log("getIsLeaveDuplicate");
+  console.log("startDate", startDate);
+  console.log("endDate", endDate);
   const query = `SELECT id FROM leave_schedule
   WHERE member = '${member}' and
   leave_start_dt = '${startDate}' and leave_end_dt = '${endDate}'
@@ -411,7 +414,7 @@ export async function updateKeyStatus(
     where id=${id}`
   );
   const leaveDetail = rows[0] as ILeaveSchedule;
-  const leaveDetailText = `ข้อมูลล่าสุด: <${id}> ${leaveDetail.member} ${
+  const leaveDetailText = `🚀 ข้อมูลล่าสุด: <${id}> ${leaveDetail.member} ${
     leaveDetail.leave_type
   } ${
     leaveDetail.leave_start_dt == leaveDetail.leave_end_dt

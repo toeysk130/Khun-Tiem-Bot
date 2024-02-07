@@ -97,8 +97,10 @@ export function getFormatLeaveDate(
     const month = leaveStartDate.slice(-3);
     // Parse the date strings manually
     const firstDay = parseInt(leaveStartDate.slice(0, 2));
-    const firstMonth = monthAbbreviations[leaveStartDate.slice(2, 5)];
+    const firstMonth =
+      monthAbbreviations[leaveStartDate.slice(2, 5).toUpperCase()];
     const firstYear = new Date().getUTCFullYear();
+
     formattedLeaveStartDate = new Date(
       Date.UTC(firstYear, firstMonth, firstDay)
     ).toISOString();
@@ -114,11 +116,11 @@ export function getFormatLeaveDate(
 
     // Parse the date strings manually
     const firstDay = parseInt(startDate.slice(0, 2));
-    const firstMonth = monthAbbreviations[startDate.slice(2, 5)];
+    const firstMonth = monthAbbreviations[startDate.slice(2, 5).toUpperCase()];
     const firstYear = new Date().getUTCFullYear();
 
     const secondDay = parseInt(endDate.slice(0, 2));
-    const secondMonth = monthAbbreviations[endDate.slice(2, 5)];
+    const secondMonth = monthAbbreviations[endDate.slice(2, 5).toUpperCase()];
     const secondYear = new Date().getUTCFullYear();
 
     formattedLeaveStartDate = new Date(

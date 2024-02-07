@@ -5,7 +5,7 @@ import {
   monthAbbreviations,
   validKeyStatus,
   validLeaveAmounts,
-  validMonths,
+  validUpcaseMonths,
 } from "../config/config";
 import { pushMsg } from "./sendLineMsg";
 
@@ -27,10 +27,10 @@ export async function validateInputDate(
   // ลาภายในวันเดียว
   if (leaveStartDate.length == 5) {
     const month = leaveStartDate.slice(-3);
-    if (!validMonths.includes(month)) {
+    if (!validUpcaseMonths.includes(month.toUpperCase())) {
       const replyMessage = `⚠️ เดือน '${leaveStartDate}' ไม่ถูกต้อง\
-              \n✅ ตัวเลือกที่มี ${validMonths
-                .map((month) => month.toUpperCase())
+              \n✅ ตัวเลือกที่มี ${validUpcaseMonths
+                .map((month) => month)
                 .join(" ")}`;
       await pushMsg(client, replyToken, replyMessage);
       return false;
@@ -45,11 +45,14 @@ export async function validateInputDate(
     // Parse the date strings manually
     const firstDay = parseInt(leaveStartDate.slice(0, 2), 10);
     const monthAbbreviation = leaveStartDate.slice(2, 5);
-    const firstMonth = validMonths.indexOf(monthAbbreviation);
+    const firstMonth = validUpcaseMonths.indexOf(
+      monthAbbreviation.toUpperCase()
+    );
     const firstYear = new Date().getUTCFullYear();
     const firstDate = new Date(Date.UTC(firstYear, firstMonth, firstDay));
     const dateString = firstDate.toISOString().split("T")[0]; // Output: '2024-02-02'
 
+    // If Duplicate date then update instead
     const id = await getIsLeaveDuplicate(pool, member, dateString, dateString);
 
     if (id > 0) {
@@ -79,19 +82,19 @@ export async function validateInputDate(
     const startDate = dates[0];
     const endDate = dates[1];
 
-    if (!validMonths.includes(startDate.slice(-3))) {
+    if (!validUpcaseMonths.includes(startDate.slice(-3))) {
       const replyMessage = `⚠️ เดือน '${startDate}' ไม่ถูกต้อง\
-              \n✅ ตัวเลือกที่มี ${validMonths
-                .map((month) => month.toUpperCase())
+              \n✅ ตัวเลือกที่มี ${validUpcaseMonths
+                .map((month) => month)
                 .join(" ")}`;
       await pushMsg(client, replyToken, replyMessage);
       return false;
     }
 
-    if (!validMonths.includes(endDate.slice(-3))) {
+    if (!validUpcaseMonths.includes(endDate.slice(-3))) {
       const replyMessage = `⚠️ เดือน '${endDate}' ไม่ถูกต้อง\
-              \n✅ ตัวเลือกที่มี ${validMonths
-                .map((month) => month.toUpperCase())
+              \n✅ ตัวเลือกที่มี ${validUpcaseMonths
+                .map((month) => month)
                 .join(" ")}`;
       await pushMsg(client, replyToken, replyMessage);
       return false;
@@ -99,11 +102,11 @@ export async function validateInputDate(
 
     // Parse the date strings manually
     const firstDay = parseInt(startDate.slice(0, 2));
-    const firstMonth = monthAbbreviations[startDate.slice(2, 5)];
+    const firstMonth = monthAbbreviations[startDate.slice(2, 5).toUpperCase()];
     const firstYear = new Date().getUTCFullYear();
 
     const secondDay = parseInt(endDate.slice(0, 2));
-    const secondMonth = monthAbbreviations[endDate.slice(2, 5)];
+    const secondMonth = monthAbbreviations[endDate.slice(2, 5).toUpperCase()];
     const secondYear = new Date().getUTCFullYear();
 
     // Create Date objects with UTC values
