@@ -10,7 +10,14 @@ import {
   getDisplayLeaveDate,
   getFormatLeaveDate,
 } from "../utils/utils";
-import { delHhRecord, getAllRemainingHh, getRemainingHh } from "./hhAPI";
+import {
+  delHhRecord,
+  getAllRemainingHh,
+  getMyNotApproveHHLists,
+  getNotApproveHHLists,
+  getNotApprvHh,
+  getRemainingHh,
+} from "./hhAPI";
 import { pushMsg } from "../utils/sendLineMsg";
 import { callQuery } from "../utils/query";
 
@@ -189,6 +196,7 @@ export async function showWaitApprove(
     order by leave_start_dt`
   );
   const leaveDetails = rows as ILeaveSchedule[];
+  const notApproveHHLists = await getNotApproveHHLists(pool);
 
   const replyMessage =
     `✏️ รายการที่ยังรอ Approve ${
@@ -202,6 +210,16 @@ export async function showWaitApprove(
           detail.leave_type
         } ${getDisplayLeaveDate(detail.leave_start_dt, detail.leave_end_dt)} ${
           detail.period_detail
+        }`;
+      })
+      .join("\n") +
+    "\n\n❤️ HH ที่รอการ Approve\n\n" +
+    notApproveHHLists
+      .map((hh) => {
+        return `🙅‍♂️ <${hh.id}> ${hh.member} ${hh.hours}h ${
+          hh.description == null || hh.description == ""
+            ? ""
+            : `(${hh.description})`
         }`;
       })
       .join("\n");
@@ -266,6 +284,7 @@ export async function updateApproveFlag(
     console.error("Error updating records:", error);
   }
 }
+
 export async function showListToday(
   pool: pg.Pool,
   client: Client,
@@ -348,14 +367,15 @@ export async function showMyList(
   const leaveDetails = rows as ILeaveSchedule[];
 
   // Get HH details
+  const notApprvHh = await getNotApprvHh(pool, member);
   const remainingHh = await getRemainingHh(pool, member);
+  const notApproveHHLists = await getMyNotApproveHHLists(pool, member);
 
   const replyMessage =
-    `✏️ รายการทั้งหมดของ ${member}\n___________\n` +
-    `❤️ hh คงเหลือ ${remainingHh} hours\
+    `✏️ รายการทั้งหมดของ ${member}\n___________\
+    \n🙅‍♂️ hh ที่รอ approve ${notApprvHh} hours\
+    \n❤️ hh คงเหลือ ${remainingHh} hours\
     \n___________\n` +
-    "🟢 approved\n🟡 key & no approve \n🔴 no key & no approve\
-    \n___________\n" +
     leaveDetails
       .map((detail) => {
         return `${getColorEmoji(detail.is_approve, detail.status)}<${
@@ -367,6 +387,17 @@ export async function showMyList(
           detail.description == null || detail.description == ""
             ? ""
             : `(${detail.description})`
+        }`;
+      })
+      .join("\n") +
+    "\n___________\n" +
+    "❤️ HH ที่รอการ Approve\n" +
+    notApproveHHLists
+      .map((hh) => {
+        return `🙅‍♂️ <${hh.id}> ${hh.member} ${hh.hours}h ${
+          hh.description == null || hh.description == ""
+            ? ""
+            : `(${hh.description})`
         }`;
       })
       .join("\n");

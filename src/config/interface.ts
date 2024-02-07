@@ -10,8 +10,9 @@ export interface IHappyHour {
   datetime: Date;
   member: string;
   type: string;
-  hour: number;
-  approver: string;
+  hours: number;
+  description: string;
+  is_approve: boolean;
 }
 
 export interface IAllRemaiHH {

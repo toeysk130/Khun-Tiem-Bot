@@ -2,6 +2,7 @@ import {
   LeaveAmountMap,
   daysOfWeek,
   monthAbbreviations,
+  validUpcaseMonths,
 } from "../config/config";
 
 export function convertDatetimeToDDMMM(inputDateString: string): string {
@@ -14,7 +15,7 @@ export function convertDatetimeToDDMMM(inputDateString: string): string {
 
   // Create the 'DDMMM' format string
   const formattedDate = `${day < 10 ? "0" : ""}${day}${
-    monthAbbreviations[monthIndex]
+    validUpcaseMonths[monthIndex - 1]
   }`;
 
   return formattedDate;

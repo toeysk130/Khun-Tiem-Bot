@@ -38,6 +38,7 @@ export async function validateLeaveRequest(
       client,
       replyToken,
       member,
+      leaveType,
       leaveStartDate,
       leaveAmount,
       leaveKey

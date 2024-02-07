@@ -2,6 +2,7 @@ import axios from "axios";
 import * as dotenv from "dotenv";
 import pg from "pg";
 import { getListToday, getWaitApprove } from "./leaveScheduleAPI";
+import { getNotApproveHHLists } from "./hhAPI";
 
 // Setup
 dotenv.config();
@@ -74,6 +75,48 @@ export async function pushMessage() {
     .catch((error) => {
       console.error("Error sending message:", error);
     });
+
+  // =======================================
+  // =======================================
+  // =======================================
+
+  const notApproveHHLists = await getNotApproveHHLists(pool);
+
+  if (notApproveHHLists.length > 0) {
+    const waitApproveHh =
+      "❤️ HH ที่นังรอ Approve\n\n" +
+      notApproveHHLists
+        .map((hh) => {
+          return `🙅‍♂️ <${hh.id}> ${hh.member} ${hh.hours}h ${
+            hh.description == null || hh.description == ""
+              ? ""
+              : `(${hh.description})`
+          }`;
+        })
+        .join("\n");
+
+    // Define the message you want to send
+    const message3 = {
+      type: "text",
+      text: waitApproveHh,
+    };
+
+    // Create the payload for the request
+    const payload3 = {
+      to: GROUP_ID,
+      messages: [message3],
+    };
+
+    // Send the message to the Line Group
+    axiosInstance
+      .post("", payload3)
+      .then((response) => {
+        console.log("Message sent successfully:", response.data);
+      })
+      .catch((error) => {
+        console.error("Error sending message:", error);
+      });
+  }
 }
 
 export async function pushSingleMessage(message: string) {

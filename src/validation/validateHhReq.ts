@@ -14,6 +14,7 @@ export async function validateHhRequest(
 ): Promise<boolean> {
   const hhType = commandArr[1]; // "เพิ่ม", "ใช้"
   const hhAmt = commandArr[2]; // 1h,2h,...,40h
+  const leaveType = "hh";
   const leaveStartDate = commandArr[3];
   const leaveAmount = commandArr[4];
   const leaveKey = "key";
@@ -36,10 +37,10 @@ export async function validateHhRequest(
 
   // Validate if remaining HH is enough
   const remainHh = await getRemainingHh(pool, member);
-  if (hhType == "ใช้" && parseInt(hhAmt) < remainHh) {
-    const replyMessage = `⚠️ จำนวน HH ไม่เพียงพอ\n\
-    😫 เรียกใช้ ${hhAmt}\n\
-    💩 คงเหลือ ${remainHh}`;
+  if (hhType == "ใช้" && parseInt(hhAmt) > remainHh) {
+    const replyMessage = `⚠️ จำนวน HH ไม่เพียงพอ\
+    \n😫 เรียกใช้ ${hhAmt}\
+    \n💩 คงเหลือ ${remainHh}h`;
     await pushMsg(client, replyToken, replyMessage);
     return false;
   }
@@ -50,6 +51,7 @@ export async function validateHhRequest(
       client,
       replyToken,
       member,
+      leaveType,
       leaveStartDate,
       leaveAmount,
       leaveKey

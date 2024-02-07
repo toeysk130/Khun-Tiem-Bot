@@ -14,6 +14,7 @@ export async function validateInputDate(
   client: Client,
   replyToken: string,
   member: string,
+  leaveType: string,
   leaveStartDate: string,
   leaveAmount: string,
   leaveKey: string
@@ -55,7 +56,7 @@ export async function validateInputDate(
     // If Duplicate date then update instead
     const id = await getIsLeaveDuplicate(pool, member, dateString, dateString);
 
-    if (id > 0) {
+    if (id > 0 && leaveType !== "hh") {
       await updateKeyStatus(pool, client, replyToken, id, leaveKey);
       return false;
     }

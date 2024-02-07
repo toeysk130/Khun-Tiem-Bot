@@ -22,11 +22,9 @@ import {
   daysColor,
   tableLists,
   validBotCommands,
-  validHhTypes,
   validKeyStatus,
   validReportTypes,
   validUpcaseMonths,
-  validhhAmts,
 } from "../config/config";
 import {
   getCurrentDateString,
@@ -35,7 +33,11 @@ import {
 } from "../utils/utils";
 import { pushMessage, pushSingleMessage } from "../API/pushMessage";
 import { validateHhRequest } from "../validation/validateHhReq";
-import { addHhRecord } from "../API/hhAPI";
+import {
+  addHhRecord,
+  checkIfHhIdExist,
+  updateHhApproveFlag,
+} from "../API/hhAPI";
 import { fetchOpenAICompletion } from "../API/chatGpt";
 import { pushMsg } from "../utils/sendLineMsg";
 
@@ -88,8 +90,9 @@ export async function handleIncomingMessage(event: WebhookEvent) {
       \n👉hh ใช้ <1h,2h,...,40h> <วันลา 26JAN> <1วัน, 3วัน, ครึ่งเช้า, ครึ่งบ่าย> <เหตุผล>\
       \n👉hh เพิ่ม <1h,2h,...,40h> <เหตุผล>\
       \n👉รายงาน/รายการ <ของฉัน, วันนี้, วีคนี้, วีคหน้า>\
-      \n👉เตือน <approve> <'',key,nokey>\
+      \n👉เตือน approve <'',key,nokey>\
       \n👉approve <id, ids(8,9)> (⛔ Only Admin)\
+      \n👉hh approve <id, ids(8,9)> (⛔ Only Admin)\
       \n👉แอบดู <ชื่อคน> (⛔ Only Admin)\
       \n👉สมัคร <ชื่อ>\
       `;
@@ -299,10 +302,10 @@ export async function handleIncomingMessage(event: WebhookEvent) {
     }
     await pushMessage();
   } else if (command == "hh") {
-    const hhType = commandArr[1]; // "เพิ่ม", "ใช้"
-    const hhAmt = commandArr[2]; // 1h,2h,...,40h
+    const hhType = commandArr[1]; // "เพิ่ม", "ใช้", "approve"
 
     if (hhType == "เพิ่ม") {
+      const hhAmt = commandArr[2]; // 1h,2h,...,40h
       const description = commandArr.slice(3).join(" "); // other elements will be description
       await addHhRecord(
         pool,
@@ -326,6 +329,39 @@ export async function handleIncomingMessage(event: WebhookEvent) {
         return;
 
       await addNewHhLeaveRequest(pool, client, replyToken, member, commandArr);
+    } else if (hhType == "approve") {
+      if (member.is_admin == false) {
+        const replyMessage = "😡 ไม่ใช่ Admin ใช้งานไม่ได้!";
+        await pushMsg(client, replyToken, replyMessage);
+        return;
+      }
+
+      const idText = commandArr[2];
+      const ids = idText.split(",").map((item) => Number(item.trim()));
+
+      // validate option
+      if (ids.length == 1) {
+        const id = ids[0];
+
+        if (!(await checkIfHhIdExist(pool, id.toString()))) {
+          const replyMessage = `⛔ ไม่มี ID:${id} ในระบบ Happy Hour`;
+          await pushMsg(client, replyToken, replyMessage);
+          return;
+        }
+
+        await updateHhApproveFlag(pool, client, replyToken, ids);
+      } else if (ids.length > 1) {
+        // validate ids
+        for (const id of ids) {
+          if (!(await checkIfHhIdExist(pool, id.toString()))) {
+            const replyMessage = `⛔ ไม่มี ID:${id} ในระบบ Happy Hour`;
+            await pushMsg(client, replyToken, replyMessage);
+            return;
+          }
+        }
+
+        await updateHhApproveFlag(pool, client, replyToken, ids);
+      }
     }
   } else if (command == "แอบดู") {
     if (member.is_admin == false) {
