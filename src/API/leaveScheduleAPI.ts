@@ -178,8 +178,7 @@ export async function addNewHhLeaveRequest(
   await pushMsg(
     client,
     replyToken,
-    `❤️‍🔥 ใช้ hh สำหรับ ${member.name} สำเร็จ คงเหลือ: ${remaining} hours\
-  ${remaining < 0 ? "\n😱 เห้ยๆ ติดลบแล้วนะเฮ้ย!!!!!!!!!!!!!" : ""}`
+    `❤️‍🔥 ใช้ hh สำหรับ ${member.name} สำเร็จ คงเหลือ: ${remaining} hours`
   );
 }
 export async function showWaitApprove(

@@ -52,8 +52,15 @@ export async function delHhRecord(
   hour: number,
   description: string
 ) {
-  const updateQuery = `INSERT INTO happy_hour (datetime, member, type, hours, description) VALUES ($1, $2, $3, $4, $5);`;
-  const values = [getCurrentTimestamp(), member, "ใช้", hour, description];
+  const updateQuery = `INSERT INTO happy_hour (datetime, member, type, hours, description, is_approve) VALUES ($1, $2, $3, $4, $5, $6);`;
+  const values = [
+    getCurrentTimestamp(),
+    member,
+    "ใช้",
+    hour,
+    description,
+    true, // is_approve always 'true' when using hh
+  ];
 
   await pool.query(updateQuery, values);
 }

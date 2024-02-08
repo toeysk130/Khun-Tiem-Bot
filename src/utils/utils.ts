@@ -15,7 +15,7 @@ export function convertDatetimeToDDMMM(inputDateString: string): string {
 
   // Create the 'DDMMM' format string
   const formattedDate = `${day < 10 ? "0" : ""}${day}${
-    validUpcaseMonths[monthIndex - 1]
+    validUpcaseMonths[monthIndex]
   }`;
 
   return formattedDate;
