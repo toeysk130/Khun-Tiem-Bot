@@ -51,6 +51,7 @@ const client = new Client({
 
 export async function handleIncomingMessage(event: WebhookEvent) {
   if (event.type !== "message") return;
+  if (event.message.type !== "text") return;
   const textMessage = event.message as TextEventMessage;
   const receivedText = textMessage.text.trim().toLowerCase();
   const replyToken = event.replyToken;
