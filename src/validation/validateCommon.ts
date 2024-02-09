@@ -83,7 +83,7 @@ export async function validateInputDate(
     const startDate = dates[0];
     const endDate = dates[1];
 
-    if (!validUpcaseMonths.includes(startDate.slice(-3))) {
+    if (!validUpcaseMonths.includes(startDate.slice(-3).toUpperCase())) {
       const replyMessage = `⚠️ เดือน '${startDate}' ไม่ถูกต้อง\
               \n✅ ตัวเลือกที่มี ${validUpcaseMonths
                 .map((month) => month)
@@ -92,7 +92,7 @@ export async function validateInputDate(
       return false;
     }
 
-    if (!validUpcaseMonths.includes(endDate.slice(-3))) {
+    if (!validUpcaseMonths.includes(endDate.slice(-3).toUpperCase())) {
       const replyMessage = `⚠️ เดือน '${endDate}' ไม่ถูกต้อง\
               \n✅ ตัวเลือกที่มี ${validUpcaseMonths
                 .map((month) => month)
