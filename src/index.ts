@@ -47,7 +47,7 @@ app.post("/webhook", async (req, res) => {
 });
 
 // Schedule the task to run at 9:30 AM every Monday to Friday
-cron.schedule("30 2 * * 1-5", pushMessage);
+// cron.schedule("30 2 * * 1-5", pushMessage);
 
 app.listen(port, async () => {
   console.log(`Example app listening at http://localhost:${port}`);
