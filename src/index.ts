@@ -17,6 +17,11 @@ app.use(bodyParser.text({ type: "text/html" }));
 
 // ------
 
+app.get("/", async (req, res) => {
+  console.log(req);
+  res.sendStatus(200);
+});
+
 app.post("/webhook", async (req, res) => {
   const events: WebhookEvent[] = req.body.events;
 
