@@ -327,7 +327,8 @@ export async function showListThisWeek(
   const { rows } = await pool.query(
     `SELECT ${LEAVE_SCHEDULE_COLUMNS}
     FROM leave_schedule 
-    where leave_start_dt >= '${startDate}' and leave_start_dt <= '${endDate}'
+    where leave_start_dt between  '${startDate}' and '${endDate}' 
+	  or leave_end_dt between  '${startDate}' and '${endDate}'    
     order by leave_start_dt`
   );
   const leaveDetails = rows as ILeaveSchedule[];
