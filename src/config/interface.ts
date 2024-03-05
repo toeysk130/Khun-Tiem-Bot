@@ -27,7 +27,7 @@ export interface ILeaveSchedule {
   datetime: Date;
   member: string;
   leave_type: string;
-  medical_cert: string;
+  medical_cert: boolean;
   status: string;
   leave_start_dt: string;
   leave_end_dt: string;

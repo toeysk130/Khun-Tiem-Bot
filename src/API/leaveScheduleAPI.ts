@@ -1,7 +1,11 @@
 import { Client } from "@line/bot-sdk";
 import pg from "pg";
 import { ILeaveSchedule, IMember } from "../config/interface";
-import { LeaveAmountMap, monthAbbreviations } from "../config/config";
+import {
+  LeaveAmountMap,
+  keywordMappings,
+  monthAbbreviations,
+} from "../config/config";
 import {
   convertDatetimeToDDMMM,
   getColorEmoji,
@@ -378,12 +382,20 @@ export async function showMyList(
     \n___________\n` +
     leaveDetails
       .map((detail) => {
-        return `${getColorEmoji(detail.is_approve, detail.status)}<${
-          detail.id
-        }> ${detail.member} ${detail.leave_type} ${getDisplayLeaveDate(
-          detail.leave_start_dt,
-          detail.leave_end_dt
-        )} ${detail.period_detail} ${detail.status} ${
+        const medCerDetail =
+          detail.leave_type == "ลาป่วย"
+            ? detail.medical_cert
+              ? "(" + keywordMappings["cer"] + " 📜)"
+              : "(" + keywordMappings["nocer"] + ")"
+            : "";
+
+        return `${getColorEmoji(detail.is_approve, detail.status)}${
+          detail.status == "key" ? "🔑" : "🔒"
+        }<${detail.id}> ${detail.member} ${
+          detail.leave_type
+        } ${getDisplayLeaveDate(detail.leave_start_dt, detail.leave_end_dt)} ${
+          detail.period_detail
+        } ${detail.status} ${medCerDetail ?? null}${
           detail.description == null || detail.description == ""
             ? ""
             : `(${detail.description})`
@@ -431,11 +443,23 @@ export async function updateKeyStatus(
   id: string,
   key: string
 ) {
-  const query = `
-    UPDATE leave_schedule
-    SET status = '${key}'
-    WHERE ID = ${id};
-  `;
+  // check if update on either Medical certificate or Key, No-Key on calendar
+  let query: string;
+
+  if (key === "cer" || key === "nocer") {
+    query = `
+      UPDATE leave_schedule
+      SET medical_cert = ${key === "cer"}
+      WHERE ID = ${id};
+    `;
+  } else {
+    query = `
+      UPDATE leave_schedule
+      SET status = '${key}'
+      WHERE ID = ${id};
+    `;
+  }
+
   await pool.query(query);
 
   // Get new details after update
@@ -445,6 +469,10 @@ export async function updateKeyStatus(
     where id=${id}`
   );
   const leaveDetail = rows[0] as ILeaveSchedule;
+  const medCerDetail =
+    leaveDetail.leave_type == "ลาป่วย" && leaveDetail.medical_cert
+      ? keywordMappings["cer"]
+      : "";
   const leaveDetailText = `🚀 ข้อมูลล่าสุด: <${id}> ${leaveDetail.member} ${
     leaveDetail.leave_type
   } ${
@@ -453,10 +481,13 @@ export async function updateKeyStatus(
       : convertDatetimeToDDMMM(leaveDetail.leave_start_dt) +
         "-" +
         convertDatetimeToDDMMM(leaveDetail.leave_end_dt)
-  } ${leaveDetail.period_detail} ${leaveDetail.status}
+  } ${leaveDetail.period_detail} ${leaveDetail.status} ${medCerDetail ?? null}
         `;
 
-  const replyMessage = `✅ Update ID:${id} to '${key}'\n${leaveDetailText}`;
+  const replyMessage = `✅ Update ID:${id} to '${key} ${
+    medCerDetail ?? null
+  }'\n${leaveDetailText}`;
+
   await pushMsg(client, replyToken, replyMessage);
 }
 

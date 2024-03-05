@@ -16,7 +16,7 @@ export const validBotCommands = [
   "คำสั่ง",
 ];
 
-export const validKeyStatus = ["key", "nokey"];
+export const validKeyStatus = ["key", "nokey", "cer", "nocer"];
 
 export const validReportTypes = [
   "ของฉัน",
@@ -33,6 +33,13 @@ export const validLeaveTypes = ["ลาพักร้อน", "ลาป่ว�
 export const ncTypes = ["อบรม", "training", "กิจกรรมบริษัท"];
 
 export const tableLists = ["member", "happy_hour", "leave_schedule"];
+
+export const keywordMappings: { [key: string]: string } = {
+  key: "key",
+  nokey: "nokey",
+  cer: "มีใบรับรองแพทย์",
+  nocer: "ไม่มีใบรับรองแพทย์",
+};
 
 // Define a map for month abbreviations
 export const monthAbbreviations: { [key: string]: number } = {
