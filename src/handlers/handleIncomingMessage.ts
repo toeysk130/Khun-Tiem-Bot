@@ -53,7 +53,6 @@ export async function handleIncomingMessage(
   event: WebhookEvent,
   chatType: string
 ) {
-  console.log("chatType", chatType);
   if (event.type !== "message") return;
   if (event.message.type !== "text") return;
   const textMessage = event.message as TextEventMessage;
@@ -74,6 +73,10 @@ export async function handleIncomingMessage(
 
   const member = await getMemberDetails(pool, userId);
   const isMemberExist = typeof member !== "undefined";
+
+  console.log("chatType", chatType);
+  console.log("member", member.name);
+  console.log("receivedText", receivedText);
 
   // สมัคร <ชื่อ>
   if (command == "สมัคร" && commandLen == 2) {
