@@ -49,7 +49,10 @@ const client = new Client({
   channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN || "",
 });
 
-export async function handleIncomingMessage(event: WebhookEvent) {
+export async function handleIncomingMessage(
+  event: WebhookEvent,
+  chatType: string
+) {
   if (event.type !== "message") return;
   if (event.message.type !== "text") return;
   const textMessage = event.message as TextEventMessage;
@@ -61,6 +64,7 @@ export async function handleIncomingMessage(event: WebhookEvent) {
   const commandLen = commandArr.length;
 
   // Ignore messages that not be bot commands
+  if (chatType == "DM" && command != "รายการ") return;
   if (!validBotCommands.includes(command)) return;
 
   const userId = event.source.userId;
@@ -87,7 +91,7 @@ export async function handleIncomingMessage(event: WebhookEvent) {
     const replyMessage = `🤖 รายการคำสั่ง\
       \n👉แจ้งลา <ลาพักร้อน, ลาป่วย, ลากิจ> <วันเริ่มลา 26JAN,26JAN-28JAN> <จำนวน 1วัน, 3วัน, ครึ่งเช้า, ครึ่งบ่าย> <key,nokey> <เหตุผล>\
       \n👉nc <อบรม, training, กิจกรรมบริษัท> <วันเริ่มลา 26JAN,26JAN-28JAN> <จำนวน 1วัน, 3วัน, ครึ่งเช้า, ครึ่งบ่าย> <เหตุผล>\
-      \n👉อัปเดต <id> <cer,nocer(ใบรับรองแพทย์),key,nokey>\
+      \n👉อัปเดต <id> <cer,nocer,key,nokey>\
       \n👉hh ใช้ <1h,2h,...,40h> <วันลา 26JAN> <1วัน, 3วัน, ครึ่งเช้า, ครึ่งบ่าย> <เหตุผล>\
       \n👉hh เพิ่ม <1h,2h,...,40h> <เหตุผล>\
       \n👉รายงาน/รายการ <ของฉัน, วันนี้, วีคนี้, วีคหน้า>\

@@ -37,14 +37,21 @@ app.post("/webhook", async (req, res) => {
   ) {
     for (const event of events) {
       if (event.type === "message") {
-        handleIncomingMessage(event);
+        handleIncomingMessage(event, "GROUP");
       }
     }
     // Allow Only Admin ID to access personal bot chat
   } else if ([process.env.ADMIN_ID].includes(userId)) {
     for (const event of events) {
       if (event.type === "message") {
-        handleIncomingMessage(event);
+        handleIncomingMessage(event, "GROUP");
+      }
+    }
+    // DM to KhunTiem
+  } else if (groupId == undefined) {
+    for (const event of events) {
+      if (event.type === "message") {
+        handleIncomingMessage(event, "DM");
       }
     }
   }
