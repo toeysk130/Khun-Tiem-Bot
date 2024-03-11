@@ -31,6 +31,10 @@ app.post("/webhook", async (req, res) => {
   const userId = req.body.events[0].source.userId;
   const groupId = req.body.events[0].source.groupId;
 
+  console.log("-------------------");
+  console.log("userId", userId);
+  console.log("groupId", groupId);
+
   if (
     groupId !== undefined &&
     [process.env.GROUP_ID, process.env.GROUP_ID_ADMIN].includes(groupId)

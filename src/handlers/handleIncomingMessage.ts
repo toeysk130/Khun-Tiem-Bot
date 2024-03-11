@@ -53,6 +53,7 @@ export async function handleIncomingMessage(
   event: WebhookEvent,
   chatType: string
 ) {
+  console.log("chatType", chatType);
   if (event.type !== "message") return;
   if (event.message.type !== "text") return;
   const textMessage = event.message as TextEventMessage;
