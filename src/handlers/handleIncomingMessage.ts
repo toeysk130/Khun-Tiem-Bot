@@ -63,6 +63,9 @@ export async function handleIncomingMessage(
   const command = commandArr[0];
   const commandLen = commandArr.length;
 
+  console.log("chatType", chatType);
+  console.log("receivedText", receivedText);
+
   // Ignore messages that not be bot commands
   if (chatType == "DM" && !["รายการ", "รายงาน"].includes(command)) return;
   if (!validBotCommands.includes(command)) return;
@@ -74,9 +77,7 @@ export async function handleIncomingMessage(
   const member = await getMemberDetails(pool, userId);
   const isMemberExist = typeof member !== "undefined";
 
-  console.log("chatType", chatType);
   console.log("member", member.name);
-  console.log("receivedText", receivedText);
 
   // สมัคร <ชื่อ>
   if (command == "สมัคร" && commandLen == 2) {
