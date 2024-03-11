@@ -65,7 +65,7 @@ export async function handleIncomingMessage(
   const commandLen = commandArr.length;
 
   // Ignore messages that not be bot commands
-  if (chatType == "DM" && command != "รายการ") return;
+  if (chatType == "DM" && !["รายการ", "รายงาน"].includes(command)) return;
   if (!validBotCommands.includes(command)) return;
 
   const userId = event.source.userId;
