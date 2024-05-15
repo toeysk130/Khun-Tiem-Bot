@@ -207,12 +207,23 @@ export async function showWaitApprove(
     }\n\n` +
     leaveDetails
       .map((detail) => {
+        const medCerDetail =
+          detail.leave_type == "ลาป่วย"
+            ? detail.medical_cert
+              ? "(" + keywordMappings["cer"] + " 📜)"
+              : "(" + keywordMappings["nocer"] + ")"
+            : "";
+
         return `${getColorEmoji(detail.is_approve, detail.status)}<${
           detail.id
         }> [${detail.status}] ${detail.member} ${
           detail.leave_type
         } ${getDisplayLeaveDate(detail.leave_start_dt, detail.leave_end_dt)} ${
           detail.period_detail
+        } ${detail.status} ${medCerDetail ?? null}${
+          detail.description == null || detail.description == ""
+            ? ""
+            : `(${detail.description})`
         }`;
       })
       .join("\n") +
