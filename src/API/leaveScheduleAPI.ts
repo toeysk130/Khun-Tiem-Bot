@@ -133,7 +133,7 @@ export async function addNewHhLeaveRequest(
   pool: pg.Pool,
   client: Client,
   replyToken: string,
-  member: IMember,
+  username: string,
   commandArr: string[]
 ) {
   const leaveType = "hh";
@@ -156,7 +156,7 @@ export async function addNewHhLeaveRequest(
 
   const values = [
     formattedDateTime,
-    member.name,
+    username,
     leaveType,
     formattedLeaveStartDate,
     formattedLeaveEndDate,
@@ -169,20 +169,20 @@ export async function addNewHhLeaveRequest(
 
   try {
     await pool.query(query, values);
-    await delHhRecord(pool, member.name, parseInt(hhAmt), description);
+    await delHhRecord(pool, username, parseInt(hhAmt), description);
   } catch (error) {
     console.error(error);
     await pushMsg(
       client,
       replyToken,
-      `😥 Failed to add new leave request for ${member.name}`
+      `😥 Failed to add new leave request for ${username}`
     );
   }
-  const remaining = await getRemainingHh(pool, member.name);
+  const remaining = await getRemainingHh(pool, username);
   await pushMsg(
     client,
     replyToken,
-    `❤️‍🔥 ใช้ hh สำหรับ ${member.name} สำเร็จ คงเหลือ: ${remaining} hours`
+    `❤️‍🔥 ใช้ hh สำหรับ ${username} สำเร็จ คงเหลือ: ${remaining} hours`
   );
 }
 export async function showWaitApprove(

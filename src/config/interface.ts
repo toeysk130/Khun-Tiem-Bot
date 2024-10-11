@@ -1,3 +1,11 @@
+export interface UserMetaData {
+  chatType: string;
+  userId: string;
+  groupId: string;
+  username: string;
+  isAdmin: boolean;
+}
+
 export interface IMember {
   id: number;
   uid: string;

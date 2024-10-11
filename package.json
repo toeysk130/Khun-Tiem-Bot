@@ -2,13 +2,13 @@
   "name": "expressjs-postgres",
   "private": true,
   "version": "1.0.0",
-  "main": "dist/index.js",
+  "main": "dist/app.js",
   "author": "Jake Runzer",
   "license": "MIT",
   "scripts": {
-    "dev": "nodemon src/index.ts",
+    "dev": "nodemon src/app.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/app.js"
   },
   "dependencies": {
     "@line/bot-sdk": "^8.2.0",
