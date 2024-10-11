@@ -16,7 +16,7 @@ export async function handleHhCommand(
     return pushMsg(
       client,
       replyToken,
-      `⚠️ Invalid usage of the "hh" command. Example: "hh เพิ่ม 1h เหตุผล" or "hh ใช้ 2h เหตุผล"`
+      `⚠️ การใช้คำสั่ง "hh" ไม่ถูกต้อง ตัวอย่าง: "hh เพิ่ม 1h เหตุผล" หรือ "hh ใช้ 2h เหตุผล"`
     );
   }
 
@@ -36,7 +36,7 @@ export async function handleHhCommand(
       await pushMsg(
         client,
         replyToken,
-        `⛔ Unknown hh command "${hhSubCommand}". Available options: "เพิ่ม", "ใช้", "approve"`
+        `⛔ คำสั่ง "hh" ที่ไม่รู้จัก "${hhSubCommand}" ตัวเลือกที่สามารถใช้ได้: "เพิ่ม", "ใช้", "approve"`
       );
       break;
   }
@@ -52,7 +52,7 @@ async function handleAddHhRecord(
     return pushMsg(
       client,
       replyToken,
-      `⚠️ Invalid usage of the "hh เพิ่ม" command. Example: "hh เพิ่ม 1h เหตุผล"`
+      `⚠️ การใช้คำสั่ง "hh เพิ่ม" ไม่ถูกต้อง ตัวอย่าง: "hh เพิ่ม 1h เหตุผล"`
     );
   }
 
@@ -61,11 +61,11 @@ async function handleAddHhRecord(
     return pushMsg(
       client,
       replyToken,
-      `⚠️ Invalid hour amount. Please provide a valid number of hours.`
+      `⚠️ จำนวนชั่วโมงไม่ถูกต้อง กรุณาระบุจำนวนชั่วโมงที่ถูกต้อง`
     );
   }
 
-  const description = commandArr.slice(3).join(" "); // Use the remaining parts as the description
+  const description = commandArr.slice(3).join(" "); // ใช้ส่วนที่เหลือเป็นคำอธิบาย
 
   try {
     await addHhRecord(
@@ -80,14 +80,14 @@ async function handleAddHhRecord(
     await pushMsg(
       client,
       replyToken,
-      `✅ Successfully added ${hhAmt} happy hour(s) with description: ${description}`
+      `✅ เพิ่มชั่วโมง Happy Hour จำนวน ${hhAmt} ชั่วโมงสำเร็จ พร้อมคำอธิบาย: ${description}`
     );
   } catch (error) {
     console.error("Error adding HH record:", error);
     await pushMsg(
       client,
       replyToken,
-      `❌ An error occurred while adding happy hour(s). Please try again later.`
+      `❌ เกิดข้อผิดพลาดขณะเพิ่มชั่วโมง Happy Hour กรุณาลองใหม่อีกครั้งภายหลัง`
     );
   }
 }
@@ -107,7 +107,7 @@ async function handleUseHhRequest(
   );
 
   if (!isValidRequest) {
-    return pushMsg(client, replyToken, `❌ Invalid happy hour request.`);
+    return pushMsg(client, replyToken, `❌ คำขอ Happy Hour ไม่ถูกต้อง`);
   }
 
   try {
@@ -118,13 +118,13 @@ async function handleUseHhRequest(
       userMetaData.username,
       commandArr
     );
-    await pushMsg(client, replyToken, `✅ Successfully used happy hour(s).`);
+    await pushMsg(client, replyToken, `✅ ใช้ชั่วโมง Happy Hour สำเร็จ`);
   } catch (error) {
     console.error("Error processing HH request:", error);
     await pushMsg(
       client,
       replyToken,
-      `❌ An error occurred while processing the happy hour request. Please try again later.`
+      `❌ เกิดข้อผิดพลาดขณะใช้ชั่วโมง Happy Hour กรุณาลองใหม่อีกครั้งภายหลัง`
     );
   }
 }
@@ -135,16 +135,19 @@ async function handleHhApproveRequest(
   userMetaData: UserMetaData,
   replyToken: string
 ) {
-  // Only Admins can approve HH requests
   if (!userMetaData.isAdmin) {
-    return pushMsg(client, replyToken, "😡 ไม่ใช่ Admin ใช้งานไม่ได้!");
+    return pushMsg(
+      client,
+      replyToken,
+      "😡 คุณไม่ใช่ Admin ไม่สามารถใช้งานได้!"
+    );
   }
 
   if (commandArr.length < 3) {
     return pushMsg(
       client,
       replyToken,
-      `⚠️ Invalid usage of the "hh approve" command. Example: "hh approve 8" or "hh approve 3,4,8"`
+      `⚠️ การใช้คำสั่ง "hh approve" ไม่ถูกต้อง ตัวอย่าง: "hh approve 8" หรือ "hh approve 3,4,8"`
     );
   }
 
@@ -168,14 +171,14 @@ async function handleHhApproveRequest(
     await pushMsg(
       client,
       replyToken,
-      `✅ Successfully approved Happy Hour for IDs: ${ids.join(", ")}`
+      `✅ อนุมัติ Happy Hour สำเร็จสำหรับ ID: ${ids.join(", ")}`
     );
   } catch (error) {
     console.error("Error approving HH IDs:", error);
     await pushMsg(
       client,
       replyToken,
-      `❌ An error occurred while approving the happy hour IDs. Please try again later.`
+      `❌ เกิดข้อผิดพลาดขณะอนุมัติ Happy Hour กรุณาลองใหม่อีกครั้งภายหลัง`
     );
   }
 }
