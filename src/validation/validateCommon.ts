@@ -6,7 +6,7 @@ import {
   validKeyStatus,
   validLeaveAmounts,
   validUpcaseMonths,
-} from "../config/config";
+} from "../configs/config";
 import { pushMsg } from "../utils/sendLineMsg";
 
 export async function validateInputDate(

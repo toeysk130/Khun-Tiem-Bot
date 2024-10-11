@@ -1,11 +1,11 @@
 import { Client } from "@line/bot-sdk";
 import pg from "pg";
-import { ILeaveSchedule, IMember } from "../config/interface";
+import { ILeaveSchedule, IMember } from "../configs/interface";
 import {
   LeaveAmountMap,
   keywordMappings,
   monthAbbreviations,
-} from "../config/config";
+} from "../configs/config";
 import {
   convertDatetimeToDDMMM,
   getColorEmoji,
@@ -14,6 +14,8 @@ import {
   getDisplayLeaveDate,
   getFormatLeaveDate,
 } from "../utils/utils";
+import { pushMsg } from "../utils/sendLineMsg";
+import { callQuery } from "../utils/query";
 import {
   delHhRecord,
   getAllRemainingHh,
@@ -21,9 +23,7 @@ import {
   getNotApproveHHLists,
   getNotApprvHh,
   getRemainingHh,
-} from "./hhAPI";
-import { pushMsg } from "../utils/sendLineMsg";
-import { callQuery } from "../utils/query";
+} from "../repositories/happyHour";
 
 const LEAVE_SCHEDULE_COLUMNS = `id, datetime, member, leave_type, medical_cert, status, leave_start_dt::text, leave_end_dt::text, leave_period, period_detail, is_approve, description`;
 

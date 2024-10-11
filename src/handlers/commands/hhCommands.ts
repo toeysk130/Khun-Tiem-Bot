@@ -1,10 +1,7 @@
-import {
-  addHhRecord,
-  checkIfHhIdExist,
-  updateHhApproveFlag,
-} from "../../API/hhAPI";
 import { addNewHhLeaveRequest } from "../../API/leaveScheduleAPI";
-import { UserMetaData } from "../../config/interface";
+import { UserMetaData } from "../../configs/interface";
+import { checkIfHhIdExist } from "../../repositories/happyHour";
+import { addHhRecord, updateHhApproveFlag } from "../../services/hhService";
 import { pushMsg } from "../../utils/sendLineMsg";
 import { validateHhRequest } from "../../validation/validateHhReq";
 import { client, pool } from "../handleIncomingMessage";

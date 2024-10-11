@@ -1,5 +1,5 @@
 import { checkIfIdExist, updateApproveFlag } from "../../API/leaveScheduleAPI";
-import { UserMetaData } from "../../config/interface";
+import { UserMetaData } from "../../configs/interface";
 import { pushMsg } from "../../utils/sendLineMsg";
 import { client, pool } from "../handleIncomingMessage";
 

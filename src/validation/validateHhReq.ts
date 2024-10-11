@@ -1,9 +1,9 @@
 import { Client } from "@line/bot-sdk";
 import pg from "pg";
 import { validateInputDate } from "./validateCommon";
-import { getRemainingHh } from "../API/hhAPI";
 import { pushMsg } from "../utils/sendLineMsg";
-import { validHhTypes, validhhAmts } from "../config/config";
+import { validHhTypes, validhhAmts } from "../configs/config";
+import { getRemainingHh } from "../repositories/happyHour";
 
 export async function validateHhRequest(
   pool: pg.Pool,

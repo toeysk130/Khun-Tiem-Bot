@@ -1,6 +1,6 @@
 import { Client } from "@line/bot-sdk";
 import pg from "pg";
-import { ncTypes, validLeaveTypes } from "../config/config";
+import { ncTypes, validLeaveTypes } from "../configs/config";
 import { validateInputDate } from "./validateCommon";
 import { pushMsg } from "../utils/sendLineMsg";
 

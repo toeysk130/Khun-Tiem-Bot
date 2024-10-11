@@ -1,5 +1,5 @@
 import { showTable } from "../../API/leaveScheduleAPI";
-import { tableLists } from "../../config/config";
+import { tableLists } from "../../configs/config";
 import { pushMsg } from "../../utils/sendLineMsg";
 import { client, pool } from "../handleIncomingMessage";
 

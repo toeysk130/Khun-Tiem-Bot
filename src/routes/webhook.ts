@@ -1,7 +1,7 @@
 import express, { Request, Response } from "express";
 import { WebhookEvent } from "@line/bot-sdk";
 import { handleIncomingMessage } from "../handlers/handleIncomingMessage";
-import { UserMetaData } from "../config/interface";
+import { UserMetaData } from "../configs/interface";
 
 export const webhookRouter = express.Router();
 
@@ -27,10 +27,8 @@ webhookRouter.post("/", async (req: Request, res: Response) => {
     isAdmin: false,
   };
 
-  console.log("userMetadata:", userMetadata);
-
   // Handle Personal Messages (Direct Messages)
-  if (chatType === "PERSONAL") {
+  if (chatType === "PERSONAL" || [process.env.ADMIN_ID].includes(userId)) {
     for (const event of events) {
       if (event.type === "message") {
         await handleIncomingMessage(event, userMetadata);
@@ -43,15 +41,6 @@ webhookRouter.post("/", async (req: Request, res: Response) => {
     chatType === "GROUP" &&
     [process.env.GROUP_ID, process.env.GROUP_ID_ADMIN].includes(groupId)
   ) {
-    for (const event of events) {
-      if (event.type === "message") {
-        await handleIncomingMessage(event, userMetadata);
-      }
-    }
-  }
-
-  // Allow only the admin ID to interact with the bot in any group chat
-  else if ([process.env.ADMIN_ID].includes(userId)) {
     for (const event of events) {
       if (event.type === "message") {
         await handleIncomingMessage(event, userMetadata);

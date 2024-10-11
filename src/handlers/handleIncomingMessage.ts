@@ -2,10 +2,10 @@ import * as dotenv from "dotenv";
 import pg from "pg";
 import { Client, TextEventMessage, WebhookEvent } from "@line/bot-sdk";
 import { getMemberDetails } from "../API/leaveScheduleAPI";
-import { validBotCommands } from "../config/config";
+import { validBotCommands } from "../configs/config";
 import { pushMsg } from "../utils/sendLineMsg";
 import { commandDispatcher } from "./commandDispatcher";
-import { UserMetaData } from "../config/interface";
+import { UserMetaData } from "../configs/interface";
 
 dotenv.config();
 
@@ -33,21 +33,23 @@ export async function handleIncomingMessage(
   // Check list for valid commands if not then return to prevent exceed resource used
   if (!validBotCommands.includes(command)) return;
 
-  // Query DB to get username
+  // Fetch user details from the database
   const member = await getMemberDetails(pool, userMetadata.userId);
-  const isMemberExist = typeof member !== "undefined";
+  const isMemberExist = !!member;
 
-  userMetadata.username = member.name;
-  userMetadata.isAdmin = member.is_admin;
-
-  console.log(userMetadata);
-
-  // If user is not registered yet and tries a command that requires membership, ignore the request.
-  if (!isMemberExist && command !== "สมัคร") {
+  // If user exists, assign metadata
+  if (isMemberExist) {
+    userMetadata.username = member.name;
+    userMetadata.isAdmin = member.is_admin;
+  } else if (command !== "สมัคร") {
+    // If user is not registered and is trying a non-registration command
     const replyMessage = `You need to register first. Use "สมัคร" followed by your name.`;
     await pushMsg(client, replyToken, replyMessage);
     return;
   }
 
+  console.log("User Metadata: ", userMetadata);
+
+  // Dispatch command based on user metadata and the command type
   await commandDispatcher(userMetadata, command, commandArr, replyToken);
 }

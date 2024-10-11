@@ -1,5 +1,5 @@
 import { pushMsg } from "../../utils/sendLineMsg";
-import { UserMetaData } from "../../config/interface";
+import { UserMetaData } from "../../configs/interface";
 import { client, pool } from "../handleIncomingMessage";
 import {
   showListThisWeek,

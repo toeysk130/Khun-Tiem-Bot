@@ -2,7 +2,7 @@ import { handleRegisterCommand } from "./commands/registerMember";
 import { handleLeaveRequest } from "./commands/leaveRequest";
 import { handleShowCommands } from "./commands/showCommands";
 import { handleShowTableCommand } from "./commands/showTable";
-import { UserMetaData } from "../config/interface";
+import { UserMetaData } from "../configs/interface";
 import { handleApproveCommand } from "./commands/approveRequest";
 import { handleReportCommand } from "./commands/reportRequest";
 import { handleHhCommand } from "./commands/hhCommands";

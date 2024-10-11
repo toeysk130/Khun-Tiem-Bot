@@ -3,7 +3,7 @@ import {
   daysOfWeek,
   monthAbbreviations,
   validUpcaseMonths,
-} from "../config/config";
+} from "../configs/config";
 
 export function convertDatetimeToDDMMM(inputDateString: string): string {
   // Parse the input date string
