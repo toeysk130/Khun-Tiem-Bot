@@ -10,35 +10,30 @@ import { handleHhCommand } from "./commands/hhCommands";
 export async function commandDispatcher(
   userMetadata: UserMetaData,
   command: string,
-  commandArr: string[],
-  replyToken: string
+  commandArr: string[]
 ) {
   switch (command) {
     case "คำสั่ง":
-      await handleShowCommands(replyToken);
+      await handleShowCommands(userMetadata.replyToken);
       break;
     case "สมัคร":
-      await handleRegisterCommand(
-        userMetadata.userId,
-        userMetadata.username,
-        replyToken
-      );
+      await handleRegisterCommand(userMetadata);
       break;
     case "แจ้งลา":
-      await handleLeaveRequest(commandArr, userMetadata.username, replyToken);
+      await handleLeaveRequest(commandArr, userMetadata);
       break;
     case "ตาราง":
-      await handleShowTableCommand(commandArr, replyToken);
+      await handleShowTableCommand(commandArr, userMetadata.replyToken);
       break;
     case "approve": // only Admin
-      await handleApproveCommand(commandArr, userMetadata, replyToken);
+      await handleApproveCommand(commandArr, userMetadata);
       break;
     case "รายงาน":
     case "รายการ":
-      await handleReportCommand(commandArr, userMetadata, replyToken);
+      await handleReportCommand(commandArr, userMetadata);
       break;
     case "hh":
-      await handleHhCommand(commandArr, userMetadata, replyToken);
+      await handleHhCommand(commandArr, userMetadata);
       break;
   }
 }

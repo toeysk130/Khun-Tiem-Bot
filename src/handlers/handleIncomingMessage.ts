@@ -41,6 +41,7 @@ export async function handleIncomingMessage(
   if (isMemberExist) {
     userMetadata.username = member.name;
     userMetadata.isAdmin = member.is_admin;
+    userMetadata.replyToken = replyToken;
   } else if (command !== "สมัคร") {
     // If user is not registered and is trying a non-registration command
     const replyMessage = `You need to register first. Use "สมัคร" followed by your name.`;
@@ -51,5 +52,5 @@ export async function handleIncomingMessage(
   console.log("User Metadata: ", userMetadata);
 
   // Dispatch command based on user metadata and the command type
-  await commandDispatcher(userMetadata, command, commandArr, replyToken);
+  await commandDispatcher(userMetadata, command, commandArr);
 }

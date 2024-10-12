@@ -1,10 +1,9 @@
 import { Client } from "@line/bot-sdk";
 import pg from "pg";
 import { pushMsg } from "./sendLineMsg";
+import { client, pool } from "../handlers/handleIncomingMessage";
 
 export async function callQuery(
-  pool: pg.Pool,
-  client: Client,
   replyToken: string,
   query: string,
   value: any[],

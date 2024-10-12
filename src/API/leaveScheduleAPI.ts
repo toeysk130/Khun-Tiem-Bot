@@ -1,11 +1,7 @@
 import { Client } from "@line/bot-sdk";
 import pg from "pg";
-import { ILeaveSchedule, IMember } from "../configs/interface";
-import {
-  LeaveAmountMap,
-  keywordMappings,
-  monthAbbreviations,
-} from "../configs/config";
+import { ILeaveSchedule, IMember, UserMetaData } from "../configs/interface";
+import { keywordMappings } from "../configs/config";
 import {
   convertDatetimeToDDMMM,
   getColorEmoji,
@@ -24,6 +20,7 @@ import {
   getNotApprvHh,
   getRemainingHh,
 } from "../repositories/happyHour";
+import { client } from "../handlers/handleIncomingMessage";
 
 const LEAVE_SCHEDULE_COLUMNS = `id, datetime, member, leave_type, medical_cert, status, leave_start_dt::text, leave_end_dt::text, leave_period, period_detail, is_approve, description`;
 
@@ -48,44 +45,79 @@ export async function registerNewMember(
   const values = [userId, userName];
   const successMsg = `🥰 Added new member '${userName}' successfully`;
   const failMsg = `😥 Failed to add new member '${userName}'`;
-  await callQuery(pool, client, replyToken, query, values, successMsg, failMsg);
+  await callQuery(replyToken, query, values, successMsg, failMsg);
 }
 
 export async function addNewLeaveRequest(
-  pool: pg.Pool,
-  client: Client,
-  replyToken: string,
-  member: IMember,
+  userMetaData: UserMetaData,
   commandArr: string[]
 ) {
-  const [, leaveType, leaveStartDate, leaveAmount, leaveKey, ...descriptions] =
-    commandArr;
-  const description = descriptions.join(" ");
+  try {
+    // Destructure commandArr and gather descriptions
+    const [
+      ,
+      leaveType,
+      leaveStartDate,
+      leaveAmount,
+      leaveKey,
+      ...descriptions
+    ] = commandArr;
+    const description = descriptions.join(" ").trim(); // Join and trim any extra spaces
 
-  const {
-    formattedLeaveStartDate,
-    formattedLeaveEndDate,
-    formattedLeaveAmount,
-  } = getFormatLeaveDate(leaveStartDate, leaveAmount);
+    // Validate input before proceeding
+    if (!leaveType || !leaveStartDate || !leaveAmount || !leaveKey) {
+      throw new Error("Missing required fields in the leave request.");
+    }
 
-  const formattedDateTime = getCurrentTimestamp();
-  const query = `INSERT INTO leave_schedule (datetime, member, leave_type, leave_start_dt, leave_end_dt, leave_period, period_detail, status, description) \
-  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);`;
+    console.log("leaveStartDate", leaveStartDate);
 
-  const values = [
-    formattedDateTime,
-    member.name,
-    leaveType,
-    formattedLeaveStartDate,
-    formattedLeaveEndDate,
-    formattedLeaveAmount,
-    leaveAmount,
-    leaveKey,
-    description,
-  ];
-  const successMsg = `🥰 Added new leave request for ${member.name} successfully`;
-  const failMsg = `😥 Failed to add new leave request for ${member.name}`;
-  await callQuery(pool, client, replyToken, query, values, successMsg, failMsg);
+    // Format dates and leave amount
+    const {
+      formattedLeaveStartDate,
+      formattedLeaveEndDate,
+      formattedLeaveAmount,
+    } = getFormatLeaveDate(leaveStartDate, leaveAmount);
+
+    // Prepare SQL query and values
+    const formattedDateTime = getCurrentTimestamp();
+    const query = `
+      INSERT INTO leave_schedule 
+        (datetime, member, leave_type, leave_start_dt, leave_end_dt, leave_period, period_detail, status, description) 
+      VALUES 
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+    `;
+
+    const values = [
+      formattedDateTime, // datetime
+      userMetaData.username, // member
+      leaveType, // leave_type
+      formattedLeaveStartDate, // leave_start_dt
+      formattedLeaveEndDate, // leave_end_dt
+      formattedLeaveAmount, // leave_period
+      leaveAmount, // period_detail
+      leaveKey, // status
+      description, // description
+    ];
+
+    console.log("values", values);
+
+    // Success and failure messages
+    const successMsg = `🥰 Added new leave request for ${userMetaData.username} successfully`;
+    const failMsg = `😥 Failed to add new leave request for ${userMetaData.username}`;
+
+    // Execute the query and handle response
+    await callQuery(
+      userMetaData.replyToken,
+      query,
+      values,
+      successMsg,
+      failMsg
+    );
+  } catch (error) {
+    console.error(`Error in addNewLeaveRequest: ${error}`, error);
+    const failMsg = `😥 An error occurred while processing the leave request for ${userMetaData.username}`;
+    await pushMsg(client, userMetaData.replyToken, failMsg);
+  }
 }
 
 export async function addNewNcLeaveRequest(
@@ -126,7 +158,7 @@ export async function addNewNcLeaveRequest(
   ];
   const successMsg = `🥰 Added new leave request for ${member.name} successfully`;
   const failMsg = `😥 Failed to add new leave request for ${member.name}`;
-  await callQuery(pool, client, replyToken, query, values, successMsg, failMsg);
+  await callQuery(replyToken, query, values, successMsg, failMsg);
 }
 
 export async function addNewHhLeaveRequest(

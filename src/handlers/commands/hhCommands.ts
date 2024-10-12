@@ -3,19 +3,18 @@ import { UserMetaData } from "../../configs/interface";
 import { checkIfHhIdExist } from "../../repositories/happyHour";
 import { addHhRecord, updateHhApproveFlag } from "../../services/hhService";
 import { pushMsg } from "../../utils/sendLineMsg";
-import { validateHhRequest } from "../../validation/validateHhReq";
+import { validateHhRequest } from "../../validations/validateHhReq";
 import { client, pool } from "../handleIncomingMessage";
 
 export async function handleHhCommand(
   commandArr: string[],
-  userMetaData: UserMetaData,
-  replyToken: string
+  userMetaData: UserMetaData
 ) {
   // Validate the command format (hh <subcommand> <params>)
   if (commandArr.length < 2) {
     return pushMsg(
       client,
-      replyToken,
+      userMetaData.replyToken,
       `⚠️ การใช้คำสั่ง "hh" ไม่ถูกต้อง ตัวอย่าง: "hh เพิ่ม 1h เหตุผล" หรือ "hh ใช้ 2h เหตุผล"`
     );
   }
@@ -24,18 +23,30 @@ export async function handleHhCommand(
 
   switch (hhSubCommand) {
     case "เพิ่ม":
-      await handleAddHhRecord(commandArr, userMetaData, replyToken);
+      await handleAddHhRecord(
+        commandArr,
+        userMetaData,
+        userMetaData.replyToken
+      );
       break;
     case "ใช้":
-      await handleUseHhRequest(commandArr, userMetaData, replyToken);
+      await handleUseHhRequest(
+        commandArr,
+        userMetaData,
+        userMetaData.replyToken
+      );
       break;
     case "approve":
-      await handleHhApproveRequest(commandArr, userMetaData, replyToken);
+      await handleHhApproveRequest(
+        commandArr,
+        userMetaData,
+        userMetaData.replyToken
+      );
       break;
     default:
       await pushMsg(
         client,
-        replyToken,
+        userMetaData.replyToken,
         `⛔ คำสั่ง "hh" ที่ไม่รู้จัก "${hhSubCommand}" ตัวเลือกที่สามารถใช้ได้: "เพิ่ม", "ใช้", "approve"`
       );
       break;
@@ -98,13 +109,7 @@ async function handleUseHhRequest(
   userMetaData: UserMetaData,
   replyToken: string
 ) {
-  const isValidRequest = await validateHhRequest(
-    pool,
-    client,
-    replyToken,
-    userMetaData.username,
-    commandArr
-  );
+  const isValidRequest = await validateHhRequest(userMetaData, commandArr);
 
   if (!isValidRequest) {
     return pushMsg(client, replyToken, `❌ คำขอ Happy Hour ไม่ถูกต้อง`);

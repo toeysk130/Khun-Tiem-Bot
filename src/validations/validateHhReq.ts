@@ -1,15 +1,12 @@
-import { Client } from "@line/bot-sdk";
-import pg from "pg";
-import { validateInputDate } from "./validateCommon";
+import { validateInputDate } from "./validateInputDate";
 import { pushMsg } from "../utils/sendLineMsg";
 import { validHhTypes, validhhAmts } from "../configs/config";
 import { getRemainingHh } from "../repositories/happyHour";
+import { client, pool } from "../handlers/handleIncomingMessage";
+import { UserMetaData } from "../configs/interface";
 
 export async function validateHhRequest(
-  pool: pg.Pool,
-  client: Client,
-  replyToken: string,
-  member: string,
+  userMetaData: UserMetaData,
   commandArr: string[]
 ): Promise<boolean> {
   const hhType = commandArr[1]; // "เพิ่ม", "ใช้"
@@ -23,7 +20,7 @@ export async function validateHhRequest(
     // "เพิ่ม", "ใช้"
     const replyMessage = `⚠️ ประเภท hh '${hhType}' ไม่มีในระบบ\
     \n✅ ตัวเลือกที่มี '${validHhTypes.join(", ")}'`;
-    await pushMsg(client, replyToken, replyMessage);
+    await pushMsg(client, userMetaData.replyToken, replyMessage);
     return false;
   }
 
@@ -31,26 +28,23 @@ export async function validateHhRequest(
     // 1h,2h,...,40h
     const replyMessage = `⚠️ จำนวน hh '${hhAmt}' ไม่มีในระบบ\
     \n✅ ตัวเลือกที่มี '1h,2h,...,40h'`;
-    await pushMsg(client, replyToken, replyMessage);
+    await pushMsg(client, userMetaData.replyToken, replyMessage);
     return false;
   }
 
   // Validate if remaining HH is enough
-  const remainHh = await getRemainingHh(pool, member);
+  const remainHh = await getRemainingHh(pool, userMetaData.username);
   if (hhType == "ใช้" && parseInt(hhAmt) > remainHh) {
     const replyMessage = `⚠️ จำนวน HH ไม่เพียงพอ\
     \n😫 เรียกใช้ ${hhAmt}\
     \n💩 คงเหลือ ${remainHh}h`;
-    await pushMsg(client, replyToken, replyMessage);
+    await pushMsg(client, userMetaData.replyToken, replyMessage);
     return false;
   }
 
   if (
     !(await validateInputDate(
-      pool,
-      client,
-      replyToken,
-      member,
+      userMetaData,
       leaveType,
       leaveStartDate,
       leaveAmount,

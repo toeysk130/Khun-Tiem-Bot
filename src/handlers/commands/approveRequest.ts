@@ -5,19 +5,22 @@ import { client, pool } from "../handleIncomingMessage";
 
 export async function handleApproveCommand(
   commandArr: string[],
-  userMetaData: UserMetaData,
-  replyToken: string
+  userMetaData: UserMetaData
 ) {
   // Only Admins are allowed to use this command
   if (!userMetaData.isAdmin) {
-    return pushMsg(client, replyToken, "😡 ไม่ใช่ Admin มัน Approve ไม่ได้!");
+    return pushMsg(
+      client,
+      userMetaData.replyToken,
+      "😡 ไม่ใช่ Admin มัน Approve ไม่ได้!"
+    );
   }
 
   // Validate that the command has the correct format (approve <id, ids>)
   if (commandArr.length !== 2) {
     return pushMsg(
       client,
-      replyToken,
+      userMetaData.replyToken,
       `⚠️ Invalid usage of the "approve" command. You must provide one or more IDs to approve. Example: "approve 8" or "approve 3,4,8,10"`
     );
   }
@@ -31,7 +34,7 @@ export async function handleApproveCommand(
   if (ids.length === 0) {
     return pushMsg(
       client,
-      replyToken,
+      userMetaData.replyToken,
       "⚠️ No valid IDs provided. Please provide one or more valid numeric IDs."
     );
   }
@@ -41,22 +44,26 @@ export async function handleApproveCommand(
     for (const id of ids) {
       const exists = await checkIfIdExist(pool, id.toString());
       if (!exists) {
-        return pushMsg(client, replyToken, `⛔ ไม่มี ID:${id} ในระบบ`);
+        return pushMsg(
+          client,
+          userMetaData.replyToken,
+          `⛔ ไม่มี ID:${id} ในระบบ`
+        );
       }
     }
 
     // If all IDs are valid, update their approval flags
-    await updateApproveFlag(pool, client, replyToken, ids);
+    await updateApproveFlag(pool, client, userMetaData.replyToken, ids);
     return pushMsg(
       client,
-      replyToken,
+      userMetaData.replyToken,
       `✅ The following IDs have been successfully approved: ${ids.join(", ")}`
     );
   } catch (error) {
     console.error("Error approving IDs:", error);
     return pushMsg(
       client,
-      replyToken,
+      userMetaData.replyToken,
       `❌ An error occurred while approving the IDs. Please try again later.`
     );
   }

@@ -1,5 +1,7 @@
 import {
+  LONG_LEAVE_DATE_LEN,
   LeaveAmountMap,
+  SINGLE_LEAVE_DATE_LEN,
   daysOfWeek,
   monthAbbreviations,
   validUpcaseMonths,
@@ -93,44 +95,46 @@ export function getFormatLeaveDate(
   let formattedLeaveEndDate = "";
   let formattedLeaveAmount = 0;
 
-  // ลาภายในวันเดียว
-  if (leaveStartDate.length == 5) {
-    const month = leaveStartDate.slice(-3);
-    // Parse the date strings manually
-    const firstDay = parseInt(leaveStartDate.slice(0, 2));
+  // ลาภายในวันเดียว DDMMMYY format (e.g., 02JAN24)
+  if (leaveStartDate.length == SINGLE_LEAVE_DATE_LEN) {
+    const firstDay = parseInt(leaveStartDate.slice(0, 2), 10); // Extract day
     const firstMonth =
-      monthAbbreviations[leaveStartDate.slice(2, 5).toUpperCase()];
-    const firstYear = new Date().getUTCFullYear();
+      monthAbbreviations[leaveStartDate.slice(2, 5).toUpperCase()]; // Extract month abbreviation and map to index
+    const firstYear = parseInt(leaveStartDate.slice(5, 7), 10) + 2000; // Extract last two digits of the year and assume 20XX
 
+    // Create formatted leave start and end dates
     formattedLeaveStartDate = new Date(
       Date.UTC(firstYear, firstMonth, firstDay)
     ).toISOString();
-    formattedLeaveEndDate = formattedLeaveStartDate;
-    formattedLeaveAmount = LeaveAmountMap[leaveAmount];
+    formattedLeaveEndDate = formattedLeaveStartDate; // Same day for single-day leave
+    formattedLeaveAmount = LeaveAmountMap[leaveAmount]; // Map leave amount
   }
 
-  // ลาหลายวัน
-  if (leaveStartDate.length == 11) {
-    const dates = leaveStartDate.split("-");
-    const startDate = dates[0];
-    const endDate = dates[1];
+  // ลาหลายวัน Handle multiple-day leave (e.g., "02JAN24-05JAN24")
+  if (leaveStartDate.length === 15) {
+    // DDMMMYY-DDMMMYY format
+    const dates = leaveStartDate.split("-"); // Split start and end dates
+    const startDate = dates[0]; // First part (e.g., "02JAN24")
+    const endDate = dates[1]; // Second part (e.g., "05JAN24")
 
-    // Parse the date strings manually
-    const firstDay = parseInt(startDate.slice(0, 2));
+    // Parse the start date
+    const firstDay = parseInt(startDate.slice(0, 2), 10);
     const firstMonth = monthAbbreviations[startDate.slice(2, 5).toUpperCase()];
-    const firstYear = new Date().getUTCFullYear();
+    const firstYear = parseInt(startDate.slice(5, 7), 10) + 2000;
 
-    const secondDay = parseInt(endDate.slice(0, 2));
+    // Parse the end date
+    const secondDay = parseInt(endDate.slice(0, 2), 10);
     const secondMonth = monthAbbreviations[endDate.slice(2, 5).toUpperCase()];
-    const secondYear = new Date().getUTCFullYear();
+    const secondYear = parseInt(endDate.slice(5, 7), 10) + 2000;
 
+    // Create formatted start and end dates
     formattedLeaveStartDate = new Date(
       Date.UTC(firstYear, firstMonth, firstDay)
     ).toISOString();
     formattedLeaveEndDate = new Date(
       Date.UTC(secondYear, secondMonth, secondDay)
     ).toISOString();
-    formattedLeaveAmount = LeaveAmountMap[leaveAmount];
+    formattedLeaveAmount = LeaveAmountMap[leaveAmount]; // Map leave amount
   }
 
   return {

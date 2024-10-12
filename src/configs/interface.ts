@@ -4,6 +4,7 @@ export interface UserMetaData {
   groupId: string;
   username: string;
   isAdmin: boolean;
+  replyToken: string;
 }
 
 export interface IMember {

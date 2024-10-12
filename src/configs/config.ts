@@ -1,3 +1,9 @@
+export const SINGLE_LEAVE_DATE_LEN = 7;
+export const LONG_LEAVE_DATE_LEN = 15;
+
+export const leaveReqExampleMsg =
+  "ตัวอย่าง: แจ้งลา ลาพักร้อน 01JAN24-03JAN24 3วัน nokey ไปเที่ยว";
+
 export const validBotCommands = [
   "แจ้งลา",
   "nc",
@@ -30,7 +36,7 @@ export const validHhTypes = ["เพิ่ม", "ใช้"];
 
 export const validLeaveTypes = ["ลาพักร้อน", "ลาป่วย", "ลากิจ"];
 
-export const ncTypes = ["อบรม", "training", "กิจกรรมบริษัท"];
+export const ncTypes = ["อบรม", "training", "กิจกรรมบริษัท", "ตรวจสุขภาพ"];
 
 export const tableLists = ["member", "happy_hour", "leave_schedule"];
 

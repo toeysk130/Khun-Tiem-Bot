@@ -25,6 +25,7 @@ webhookRouter.post("/", async (req: Request, res: Response) => {
     groupId,
     username: "",
     isAdmin: false,
+    replyToken: "",
   };
 
   // Handle Personal Messages (Direct Messages)

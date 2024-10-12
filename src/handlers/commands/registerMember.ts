@@ -1,16 +1,19 @@
 import { registerNewMember } from "../../API/leaveScheduleAPI";
+import { UserMetaData } from "../../configs/interface";
 import { pushMsg } from "../../utils/sendLineMsg";
 import { client, pool } from "../handleIncomingMessage";
 
-export async function handleRegisterCommand(
-  userId: string,
-  userName: string,
-  replyToken: string
-) {
-  if (userName) {
-    const replyMessage = `User ${userName} มีอยู่ในระบบแล้วครับ`;
-    await pushMsg(client, replyToken, replyMessage);
+export async function handleRegisterCommand(userMetaData: UserMetaData) {
+  if (userMetaData.username) {
+    const replyMessage = `User ${userMetaData.username} มีอยู่ในระบบแล้วครับ`;
+    await pushMsg(client, userMetaData.replyToken, replyMessage);
   } else {
-    await registerNewMember(pool, client, replyToken, userId, userName);
+    await registerNewMember(
+      pool,
+      client,
+      userMetaData.replyToken,
+      userMetaData.userId,
+      userMetaData.username
+    );
   }
 }

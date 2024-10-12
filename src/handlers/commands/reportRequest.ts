@@ -14,14 +14,13 @@ import {
 
 export async function handleReportCommand(
   commandArr: string[],
-  userMetaData: UserMetaData,
-  replyToken: string
+  userMetaData: UserMetaData
 ) {
   if (commandArr.length !== 2) {
     // Ex. "รายงาน วันนี้", "รายงาน วีคนี้", "รายงาน ของฉัน"
     return pushMsg(
       client,
-      replyToken,
+      userMetaData.replyToken,
       `⚠️ Invalid usage of the "รายงาน" command. Example: "รายงาน วันนี้", "รายงาน วีคนี้", "รายงาน ของฉัน"`
     );
   }
@@ -30,21 +29,21 @@ export async function handleReportCommand(
 
   switch (reportType) {
     case "วันนี้":
-      await handleTodayReport(replyToken);
+      await handleTodayReport(userMetaData.replyToken);
       break;
     case "ของฉัน":
-      await handleMyReport(userMetaData, replyToken);
+      await handleMyReport(userMetaData, userMetaData.replyToken);
       break;
     case "วีคนี้":
-      await handleWeeklyReport(replyToken, "this_week");
+      await handleWeeklyReport(userMetaData.replyToken, "this_week");
       break;
     case "วีคหน้า":
-      await handleWeeklyReport(replyToken, "next_week");
+      await handleWeeklyReport(userMetaData.replyToken, "next_week");
       break;
     default:
       await pushMsg(
         client,
-        replyToken,
+        userMetaData.replyToken,
         `⛔ ตัวเลือก '${reportType}' ไม่มีในระบบ. Available options: "ของฉัน", "วันนี้", "วีคนี้", "วีคหน้า"`
       );
       break;

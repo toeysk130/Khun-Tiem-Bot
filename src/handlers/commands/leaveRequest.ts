@@ -1,22 +1,14 @@
 import { addNewLeaveRequest } from "../../API/leaveScheduleAPI";
-import { validateLeaveRequest } from "../../validation/validateLeaveReq";
-import { client, pool } from "../handleIncomingMessage";
+import { UserMetaData } from "../../configs/interface";
+import { validateLeaveRequest } from "../../validations/validateLeaveReq";
 
 export async function handleLeaveRequest(
   commandArr: string[],
-  member: any,
-  replyToken: string
+  userMetaData: UserMetaData
 ) {
-  const isValidRequest = await validateLeaveRequest(
-    pool,
-    client,
-    member.name,
-    commandArr,
-    commandArr.length,
-    replyToken
-  );
+  const isValidRequest = await validateLeaveRequest(userMetaData, commandArr);
 
   if (!isValidRequest) return;
 
-  await addNewLeaveRequest(pool, client, replyToken, member, commandArr);
+  await addNewLeaveRequest(userMetaData, commandArr);
 }
