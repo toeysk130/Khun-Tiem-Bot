@@ -4,6 +4,7 @@ import {
   showListThisWeek,
   showListToday,
   showMyList,
+  showWaitApprove,
 } from "../../API/leaveScheduleAPI";
 import {
   getCurrentDateString,
@@ -60,6 +61,19 @@ export async function handleOtherReport(
       userMetaData.username,
       userMetaData.replyToken
     );
+  } catch (error) {
+    console.error("Error fetching user's report:", error);
+    await pushMsg(
+      client,
+      userMetaData.replyToken,
+      `❌ An error occurred while fetching your report. Please try again later.`
+    );
+  }
+}
+
+export async function handleWarningReport(userMetaData: UserMetaData) {
+  try {
+    await showWaitApprove(pool, client, userMetaData.replyToken, "");
   } catch (error) {
     console.error("Error fetching user's report:", error);
     await pushMsg(

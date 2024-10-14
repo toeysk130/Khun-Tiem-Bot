@@ -6,6 +6,7 @@ import { handleApproveCommand } from "./commands/approveRequest";
 import {
   handleOtherReport,
   handleReportCommand,
+  handleWarningReport,
 } from "./commands/reportRequest";
 import { handleHhCommand } from "./commands/hhCommands";
 import { UserMetaData } from "../types/interface";
@@ -37,6 +38,9 @@ export async function commandDispatcher(
       break;
     case "แอบดู":
       await handleOtherReport(commandArr, userMetadata);
+      break;
+    case "เตือน":
+      await handleWarningReport(userMetadata);
       break;
     case "hh":
       await handleHhCommand(commandArr, userMetadata);
