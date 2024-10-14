@@ -3,7 +3,10 @@ import { handleLeaveRequest } from "./commands/leaveRequest";
 import { handleShowCommands } from "./commands/showCommands";
 import { handleShowTableCommand } from "./commands/showTable";
 import { handleApproveCommand } from "./commands/approveRequest";
-import { handleReportCommand } from "./commands/reportRequest";
+import {
+  handleOtherReport,
+  handleReportCommand,
+} from "./commands/reportRequest";
 import { handleHhCommand } from "./commands/hhCommands";
 import { UserMetaData } from "../types/interface";
 
@@ -31,6 +34,9 @@ export async function commandDispatcher(
     case "รายงาน":
     case "รายการ":
       await handleReportCommand(commandArr, userMetadata);
+      break;
+    case "แอบดู":
+      await handleOtherReport(commandArr, userMetadata);
       break;
     case "hh":
       await handleHhCommand(commandArr, userMetadata);

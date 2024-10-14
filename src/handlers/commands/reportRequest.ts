@@ -50,6 +50,28 @@ export async function handleReportCommand(
   }
 }
 
+export async function handleOtherReport(
+  commandArr: string[],
+  userMetaData: UserMetaData
+) {
+  try {
+    userMetaData.username = commandArr[1]; // Inject target username into user meta obj
+    await showMyList(
+      pool,
+      client,
+      userMetaData.username,
+      userMetaData.replyToken
+    );
+  } catch (error) {
+    console.error("Error fetching user's report:", error);
+    await pushMsg(
+      client,
+      userMetaData.replyToken,
+      `❌ An error occurred while fetching your report. Please try again later.`
+    );
+  }
+}
+
 async function handleTodayReport(replyToken: string) {
   try {
     await showListToday(pool, client, replyToken);

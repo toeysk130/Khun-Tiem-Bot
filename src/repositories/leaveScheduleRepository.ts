@@ -11,7 +11,7 @@ export async function getLeaveScheduleByMember(pool: pg.Pool, member: string) {
   const { rows } = await pool.query(
     `SELECT ${LEAVE_SCHEDULE_COLUMNS} FROM leave_schedule 
        WHERE member = $1 
-       ORDER BY leave_start_dt`,
+       ORDER BY leave_start_dt DESC`,
     [member]
   );
   return rows as ILeaveSchedule[];
