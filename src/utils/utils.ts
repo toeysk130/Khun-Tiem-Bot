@@ -5,20 +5,21 @@ import {
   daysOfWeek,
   monthAbbreviations,
   validUpcaseMonths,
-} from "../configs/config";
+} from "../configs/constants";
 
-export function convertDatetimeToDDMMM(inputDateString: string): string {
+export function convertDatetimeToDDMMYY(inputDateString: string): string {
   // Parse the input date string
   const date = new Date(inputDateString);
 
-  // Extract day and month components from the date
+  // Extract day, month, and year components from the date
   const day = date.getUTCDate();
   const monthIndex = date.getUTCMonth();
+  const year = date.getUTCFullYear() % 100; // Get last two digits of the year
 
-  // Create the 'DDMMM' format string
+  // Create the 'DDMMMYY' format string
   const formattedDate = `${day < 10 ? "0" : ""}${day}${
     validUpcaseMonths[monthIndex]
-  }`;
+  }${year < 10 ? "0" : ""}${year}`; // Ensure the year is always two digits
 
   return formattedDate;
 }
@@ -153,8 +154,8 @@ export function getDisplayLeaveDate(
   leave_end_dt: string
 ): string {
   return leave_start_dt == leave_end_dt
-    ? convertDatetimeToDDMMM(leave_start_dt)
-    : convertDatetimeToDDMMM(leave_start_dt) +
+    ? convertDatetimeToDDMMYY(leave_start_dt)
+    : convertDatetimeToDDMMYY(leave_start_dt) +
         "-" +
-        convertDatetimeToDDMMM(leave_end_dt);
+        convertDatetimeToDDMMYY(leave_end_dt);
 }

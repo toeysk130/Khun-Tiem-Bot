@@ -2,11 +2,11 @@ import {
   leaveReqExampleMsg,
   ncTypes,
   validLeaveTypes,
-} from "../configs/config";
+} from "../configs/constants";
 import { validateInputDate } from "./validateInputDate";
 import { pushMsg } from "../utils/sendLineMsg";
 import { client } from "../handlers/handleIncomingMessage";
-import { UserMetaData } from "../configs/interface";
+import { UserMetaData } from "../types/interface";
 
 export async function validateLeaveRequest(
   userMetaData: UserMetaData,

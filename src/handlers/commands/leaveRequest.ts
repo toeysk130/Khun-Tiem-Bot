@@ -1,5 +1,5 @@
 import { addNewLeaveRequest } from "../../API/leaveScheduleAPI";
-import { UserMetaData } from "../../configs/interface";
+import { UserMetaData } from "../../types/interface";
 import { validateLeaveRequest } from "../../validations/validateLeaveReq";
 
 export async function handleLeaveRequest(

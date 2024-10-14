@@ -1,5 +1,5 @@
 import { showTable } from "../../API/leaveScheduleAPI";
-import { tableLists } from "../../configs/config";
+import { tableLists } from "../../configs/constants";
 import { pushMsg } from "../../utils/sendLineMsg";
 import { client, pool } from "../handleIncomingMessage";
 
@@ -12,7 +12,9 @@ export async function handleShowTableCommand(
     await pushMsg(
       client,
       replyToken,
-      `⚠️ Invalid usage of the "ตาราง" command. Please provide a valid table name.`
+      `⚠️ Invalid usage of the "ตาราง" command. Please provide a valid table name.\n Ex: ตาราง (${tableLists.join(
+        ", "
+      )})`
     );
     return;
   }
@@ -33,7 +35,7 @@ export async function handleShowTableCommand(
 
   // Fetch the table data and display it
   try {
-    await showTable(pool, client, tableName, replyToken);
+    await showTable(pool, client, replyToken, tableName);
   } catch (error) {
     await pushMsg(
       client,

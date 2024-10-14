@@ -1,9 +1,7 @@
 import { Client } from "@line/bot-sdk";
 import pg from "pg";
-import { ILeaveSchedule, IMember, UserMetaData } from "../configs/interface";
-import { keywordMappings } from "../configs/config";
 import {
-  convertDatetimeToDDMMM,
+  convertDatetimeToDDMMYY,
   getColorEmoji,
   getCurrentDateString,
   getCurrentTimestamp,
@@ -21,8 +19,12 @@ import {
   getRemainingHh,
 } from "../repositories/happyHour";
 import { client } from "../handlers/handleIncomingMessage";
-
-const LEAVE_SCHEDULE_COLUMNS = `id, datetime, member, leave_type, medical_cert, status, leave_start_dt::text, leave_end_dt::text, leave_period, period_detail, is_approve, description`;
+import { ILeaveSchedule, IMember, UserMetaData } from "../types/interface";
+import { keywordMappings, LEAVE_SCHEDULE_COLUMNS } from "../configs/constants";
+import {
+  getLeaveScheduleByMember,
+  getNotApprovedHh,
+} from "../repositories/leaveScheduleRepository";
 
 export async function getMemberDetails(
   pool: pg.Pool,
@@ -69,8 +71,6 @@ export async function addNewLeaveRequest(
       throw new Error("Missing required fields in the leave request.");
     }
 
-    console.log("leaveStartDate", leaveStartDate);
-
     // Format dates and leave amount
     const {
       formattedLeaveStartDate,
@@ -98,8 +98,6 @@ export async function addNewLeaveRequest(
       leaveKey, // status
       description, // description
     ];
-
-    console.log("values", values);
 
     // Success and failure messages
     const successMsg = `🥰 Added new leave request for ${userMetaData.username} successfully`;
@@ -279,26 +277,49 @@ export async function showTable(
   replyToken: string,
   tableName: string
 ) {
-  if (tableName == "member") {
-    const { rows } = await pool.query(`SELECT * FROM ${tableName}`);
-    const members: IMember[] = rows as IMember[];
+  try {
+    // Validate table name to prevent SQL injection
+    if (!["member", "happy_hour"].includes(tableName)) {
+      throw new Error(`Invalid table name: ${tableName}`);
+    }
 
-    const replyMessage = members
-      .map((member) => {
-        return `${member.name} ${member.is_admin ? "(admin)" : ""}`;
-      })
-      .join("\n");
-    pushMsg(client, replyToken, replyMessage);
-  } else if (tableName == "happy_hour") {
-    const allRemainingHhs = await getAllRemainingHh(pool);
-    const replyMessage =
-      "❤️ ยอด HH คงเหลือแต่ละคน \n" +
-      allRemainingHhs
-        .map((detail) => {
-          return `- ${detail.member}: ${detail.remaining}h`;
-        })
+    let replyMessage = "";
+
+    // Handle member table
+    if (tableName === "member") {
+      const { rows } = await pool.query(
+        `SELECT * FROM ${tableName} ORDER BY is_admin, name`
+      );
+      const members: IMember[] = rows as IMember[];
+
+      replyMessage = members
+        .map((member) => `${member.name} ${member.is_admin ? "(admin)" : ""}`)
         .join("\n");
-    pushMsg(client, replyToken, replyMessage);
+    }
+
+    // Handle happy_hour table
+    else if (tableName === "happy_hour") {
+      const allRemainingHhs = await getAllRemainingHh(pool);
+      replyMessage =
+        "❤️ ยอด HH คงเหลือแต่ละคน \n" +
+        allRemainingHhs
+          .map((detail) => `- ${detail.member}: ${detail.remaining}h`)
+          .join("\n");
+    }
+
+    // Send the reply
+    if (replyMessage) {
+      await pushMsg(client, replyToken, replyMessage);
+    } else {
+      await pushMsg(client, replyToken, "⚠️ No data found.");
+    }
+  } catch (error) {
+    console.error(`Error in showTable for table ${tableName}:`, error);
+    await pushMsg(
+      client,
+      replyToken,
+      `❌ An error occurred while fetching data from ${tableName}.`
+    );
   }
 }
 
@@ -388,9 +409,6 @@ export async function getIsLeaveDuplicate(
   startDate: string,
   endDate: string
 ) {
-  console.log("getIsLeaveDuplicate");
-  console.log("startDate", startDate);
-  console.log("endDate", endDate);
   const query = `SELECT id FROM leave_schedule
   WHERE member = '${member}' and
   leave_start_dt = '${startDate}' and leave_end_dt = '${endDate}'
@@ -405,59 +423,68 @@ export async function showMyList(
   member: string,
   replyToken: string
 ) {
-  const { rows } = await pool.query(
-    `SELECT ${LEAVE_SCHEDULE_COLUMNS}
-    FROM leave_schedule 
-    WHERE member = '${member}'
-    order by leave_start_dt`
-  );
-  const leaveDetails = rows as ILeaveSchedule[];
+  try {
+    // Fetch leave details and HH details in parallel for performance optimization
+    const [leaveDetails, hhDetails] = await Promise.all([
+      getLeaveScheduleByMember(pool, member),
+      getNotApprovedHh(pool, member),
+    ]);
 
-  // Get HH details
-  const notApprvHh = await getNotApprvHh(pool, member);
-  const remainingHh = await getRemainingHh(pool, member);
-  const notApproveHHLists = await getMyNotApproveHHLists(pool, member);
+    // Destructure HH details
+    const { notApprvHh, remainingHh, notApproveHHLists } = hhDetails;
 
-  const replyMessage =
-    `✏️ รายการทั้งหมดของ ${member}\n___________\
-    \n🙅‍♂️ hh ที่รอ approve ${notApprvHh} hours\
-    \n❤️ hh คงเหลือ ${remainingHh} hours\
-    \n___________\n` +
-    leaveDetails
+    // Format leave details
+    const formattedLeaveDetails = leaveDetails
       .map((detail) => {
+        console.log("detail", detail);
         const medCerDetail =
-          detail.leave_type == "ลาป่วย"
+          detail.leave_type === "ลาป่วย"
             ? detail.medical_cert
-              ? "(" + keywordMappings["cer"] + " 📜)"
-              : "(" + keywordMappings["nocer"] + ")"
+              ? `(${keywordMappings["cer"]} 📜)`
+              : `(${keywordMappings["nocer"]})`
             : "";
 
         return `${getColorEmoji(detail.is_approve, detail.status)}${
-          detail.status == "key" ? "🔑" : "🔒"
+          detail.status === "key" ? "🔑" : "🔒"
         }<${detail.id}> ${detail.member} ${
           detail.leave_type
         } ${getDisplayLeaveDate(detail.leave_start_dt, detail.leave_end_dt)} ${
           detail.period_detail
-        } ${detail.status} ${medCerDetail ?? null}${
-          detail.description == null || detail.description == ""
-            ? ""
-            : `(${detail.description})`
-        }`;
-      })
-      .join("\n") +
-    "\n___________\n" +
-    "❤️ HH ที่รอการ Approve\n" +
-    notApproveHHLists
-      .map((hh) => {
-        return `🙅‍♂️ <${hh.id}> ${hh.member} ${hh.hours}h ${
-          hh.description == null || hh.description == ""
-            ? ""
-            : `(${hh.description})`
+        } ${detail.status} ${medCerDetail}${
+          detail.description ? `(${detail.description})` : ""
         }`;
       })
       .join("\n");
 
-  await pushMsg(client, replyToken, replyMessage);
+    // Format HH details
+    const formattedHHDetails = notApproveHHLists
+      .map((hh) => {
+        return `🙅‍♂️ <${hh.id}> ${hh.member} ${hh.hours}h ${
+          hh.description ? `(${hh.description})` : ""
+        }`;
+      })
+      .join("\n");
+
+    // Construct the final message
+    const replyMessage =
+      `✏️ รายการทั้งหมดของ ${member}\n___________\n` +
+      `🙅‍♂️ hh ที่รอ approve ${notApprvHh} hours\n` +
+      `❤️ hh คงเหลือ ${remainingHh} hours\n___________\n` +
+      formattedLeaveDetails +
+      "\n___________\n" +
+      "❤️ HH ที่รอการ Approve\n" +
+      formattedHHDetails;
+
+    // Send the message
+    await pushMsg(client, replyToken, replyMessage);
+  } catch (error) {
+    console.error(`Error fetching leave list for ${member}:`, error);
+    await pushMsg(
+      client,
+      replyToken,
+      "❌ An error occurred while fetching your list. Please try again later."
+    );
+  }
 }
 
 export async function checkIfIdExist(
@@ -520,10 +547,10 @@ export async function updateKeyStatus(
     leaveDetail.leave_type
   } ${
     leaveDetail.leave_start_dt == leaveDetail.leave_end_dt
-      ? convertDatetimeToDDMMM(leaveDetail.leave_start_dt)
-      : convertDatetimeToDDMMM(leaveDetail.leave_start_dt) +
+      ? convertDatetimeToDDMMYY(leaveDetail.leave_start_dt)
+      : convertDatetimeToDDMMYY(leaveDetail.leave_start_dt) +
         "-" +
-        convertDatetimeToDDMMM(leaveDetail.leave_end_dt)
+        convertDatetimeToDDMMYY(leaveDetail.leave_end_dt)
   } ${leaveDetail.period_detail} ${leaveDetail.status} ${medCerDetail ?? null}
         `;
 

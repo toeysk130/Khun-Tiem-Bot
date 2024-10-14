@@ -1,9 +1,9 @@
 import { validateInputDate } from "./validateInputDate";
 import { pushMsg } from "../utils/sendLineMsg";
-import { validHhTypes, validhhAmts } from "../configs/config";
 import { getRemainingHh } from "../repositories/happyHour";
 import { client, pool } from "../handlers/handleIncomingMessage";
-import { UserMetaData } from "../configs/interface";
+import { validhhAmts, validHhTypes } from "../configs/constants";
+import { UserMetaData } from "../types/interface";
 
 export async function validateHhRequest(
   userMetaData: UserMetaData,

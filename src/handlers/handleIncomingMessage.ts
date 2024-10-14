@@ -2,10 +2,10 @@ import * as dotenv from "dotenv";
 import pg from "pg";
 import { Client, TextEventMessage, WebhookEvent } from "@line/bot-sdk";
 import { getMemberDetails } from "../API/leaveScheduleAPI";
-import { validBotCommands } from "../configs/config";
 import { pushMsg } from "../utils/sendLineMsg";
 import { commandDispatcher } from "./commandDispatcher";
-import { UserMetaData } from "../configs/interface";
+import { UserMetaData } from "../types/interface";
+import { validBotCommands } from "../configs/constants";
 
 dotenv.config();
 

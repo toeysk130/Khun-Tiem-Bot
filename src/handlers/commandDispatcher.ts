@@ -2,10 +2,10 @@ import { handleRegisterCommand } from "./commands/registerMember";
 import { handleLeaveRequest } from "./commands/leaveRequest";
 import { handleShowCommands } from "./commands/showCommands";
 import { handleShowTableCommand } from "./commands/showTable";
-import { UserMetaData } from "../configs/interface";
 import { handleApproveCommand } from "./commands/approveRequest";
 import { handleReportCommand } from "./commands/reportRequest";
 import { handleHhCommand } from "./commands/hhCommands";
+import { UserMetaData } from "../types/interface";
 
 export async function commandDispatcher(
   userMetadata: UserMetaData,

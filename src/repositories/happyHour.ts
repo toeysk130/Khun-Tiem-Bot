@@ -1,6 +1,6 @@
 import { Pool } from "pg";
-import { IAllRemaiHH, IHappyHour } from "../configs/interface";
 import { getCurrentTimestamp } from "../utils/utils";
+import { IAllRemaiHH, IHappyHour } from "../types/interface";
 
 // Add new happy hour record
 export async function insertHhRecord(

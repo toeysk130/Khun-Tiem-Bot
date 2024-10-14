@@ -156,3 +156,5 @@ export const validhhAmts = [
   "39h",
   "40h",
 ];
+
+export const LEAVE_SCHEDULE_COLUMNS = `id, datetime, member, leave_type, medical_cert, status, leave_start_dt::text, leave_end_dt::text, leave_period, period_detail, is_approve, description`;

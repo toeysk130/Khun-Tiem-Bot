@@ -1,7 +1,7 @@
 import express, { Request, Response } from "express";
 import { WebhookEvent } from "@line/bot-sdk";
 import { handleIncomingMessage } from "../handlers/handleIncomingMessage";
-import { UserMetaData } from "../configs/interface";
+import { UserMetaData } from "../types/interface";
 
 export const webhookRouter = express.Router();
 

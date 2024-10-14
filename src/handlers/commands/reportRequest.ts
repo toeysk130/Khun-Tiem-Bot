@@ -1,5 +1,4 @@
 import { pushMsg } from "../../utils/sendLineMsg";
-import { UserMetaData } from "../../configs/interface";
 import { client, pool } from "../handleIncomingMessage";
 import {
   showListThisWeek,
@@ -11,6 +10,7 @@ import {
   getCurrentWeekDate,
   getNextWeektDateString,
 } from "../../utils/utils";
+import { UserMetaData } from "../../types/interface";
 
 export async function handleReportCommand(
   commandArr: string[],

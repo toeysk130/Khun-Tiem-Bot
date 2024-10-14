@@ -6,10 +6,10 @@ import {
   validKeyStatus,
   validLeaveAmounts,
   validUpcaseMonths,
-} from "../configs/config";
+} from "../configs/constants";
 import { pushMsg } from "../utils/sendLineMsg";
 import { client, pool } from "../handlers/handleIncomingMessage";
-import { UserMetaData } from "../configs/interface";
+import { UserMetaData } from "../types/interface";
 
 export async function validateInputDate(
   userMetaData: UserMetaData,

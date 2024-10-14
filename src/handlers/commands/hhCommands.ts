@@ -1,5 +1,5 @@
 import { addNewHhLeaveRequest } from "../../API/leaveScheduleAPI";
-import { UserMetaData } from "../../configs/interface";
+import { UserMetaData } from "../../types/interface";
 import { checkIfHhIdExist } from "../../repositories/happyHour";
 import { addHhRecord, updateHhApproveFlag } from "../../services/hhService";
 import { pushMsg } from "../../utils/sendLineMsg";
