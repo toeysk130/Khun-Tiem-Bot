@@ -1,5 +1,4 @@
 import {
-  LONG_LEAVE_DATE_LEN,
   LeaveAmountMap,
   SINGLE_LEAVE_DATE_LEN,
   daysOfWeek,

@@ -97,71 +97,8 @@ async function handleMyReport(userMetaData: UserMetaData, replyToken: string) {
 }
 async function handleWeeklyReport(replyToken: string, reportType: string) {
   try {
-    // Get dates for this week or next week
-    const currentWeekDates =
-      reportType === "วีคนี้"
-        ? getCurrentWeekDate(new Date(getCurrentDateString()))
-        : getCurrentWeekDate(new Date(getNextWeektDateString()));
-
-    const currentWeekStartDate = currentWeekDates[0].date;
-    const currentWeekEndDate =
-      currentWeekDates[currentWeekDates.length - 1].date;
-
-    // Fetch leave details for the week
-    const leaveListThisWeeks = await showListThisWeek(
-      pool,
-      currentWeekStartDate,
-      currentWeekEndDate
-    );
-
-    // Initialize an object to accumulate members for each day
-    let dayMembersMap: { [key: string]: string[] } = {};
-
-    // Function to format date as DDMMM (e.g., 29JAN)
-    function formatDate(date: string): string {
-      const parts = date.split("-");
-      const day = parts[2];
-      const monthIndex = parseInt(parts[1], 10) - 1;
-      const month = validUpcaseMonths[monthIndex];
-      return `${day}${month}`;
-    }
-
-    // Prepare the result string with formatted dates
-    let resultString = `😶‍🌫️ ใครลาบ้าง ${
-      reportType === "วีคนี้" ? "สัปดาห์นี้" : "สัปดาห์หน้า"
-    }\n\n`;
-
-    currentWeekDates.forEach((weekDate, index) => {
-      // Initialize members array for each day
-      dayMembersMap[weekDate.day] = [];
-
-      // Format date
-      const formattedDate = formatDate(weekDate.date);
-
-      // Populate members for each day
-      leaveListThisWeeks.forEach((leave) => {
-        if (
-          weekDate.date >= leave.leave_start_dt &&
-          weekDate.date <= leave.leave_end_dt
-        ) {
-          const leaveStr = `${leave.member} (${leave.leave_type}${
-            leave.period_detail.startsWith("ครึ่ง")
-              ? `-${leave.period_detail}`
-              : ``
-          })`;
-
-          dayMembersMap[weekDate.day].push(leaveStr);
-        }
-      });
-
-      // Append to result string
-      resultString += `${daysColor[index]}${formattedDate}(${weekDate.day}) : ${
-        dayMembersMap[weekDate.day].join(", ") || ""
-      }\n`;
-    });
-
     // Send the result
-    await pushMsg(client, replyToken, resultString);
+    await pushMsg(client, replyToken, await buildWeeklyReport(reportType));
   } catch (error) {
     console.error(`Error fetching ${reportType} report:`, error);
     await pushMsg(
@@ -170,4 +107,70 @@ async function handleWeeklyReport(replyToken: string, reportType: string) {
       `❌ An error occurred while generating the weekly report. Please try again later.`
     );
   }
+}
+
+export async function buildWeeklyReport(reportType: string) {
+  // Get dates for this week or next week
+  const currentWeekDates =
+    reportType === "วีคนี้"
+      ? getCurrentWeekDate(new Date(getCurrentDateString()))
+      : getCurrentWeekDate(new Date(getNextWeektDateString()));
+
+  const currentWeekStartDate = currentWeekDates[0].date;
+  const currentWeekEndDate = currentWeekDates[currentWeekDates.length - 1].date;
+
+  // Fetch leave details for the week
+  const leaveListThisWeeks = await showListThisWeek(
+    pool,
+    currentWeekStartDate,
+    currentWeekEndDate
+  );
+
+  // Initialize an object to accumulate members for each day
+  let dayMembersMap: { [key: string]: string[] } = {};
+
+  // Function to format date as DDMMM (e.g., 29JAN)
+  function formatDate(date: string): string {
+    const parts = date.split("-");
+    const day = parts[2];
+    const monthIndex = parseInt(parts[1], 10) - 1;
+    const month = validUpcaseMonths[monthIndex];
+    return `${day}${month}`;
+  }
+
+  // Prepare the result string with formatted dates
+  let resultString = `😶‍🌫️ ใครลาบ้าง ${
+    reportType === "วีคนี้" ? "สัปดาห์นี้" : "สัปดาห์หน้า"
+  }\n\n`;
+
+  currentWeekDates.forEach((weekDate, index) => {
+    // Initialize members array for each day
+    dayMembersMap[weekDate.day] = [];
+
+    // Format date
+    const formattedDate = formatDate(weekDate.date);
+
+    // Populate members for each day
+    leaveListThisWeeks.forEach((leave) => {
+      if (
+        weekDate.date >= leave.leave_start_dt &&
+        weekDate.date <= leave.leave_end_dt
+      ) {
+        const leaveStr = `${leave.member} (${leave.leave_type}${
+          leave.period_detail.startsWith("ครึ่ง")
+            ? `-${leave.period_detail}`
+            : ``
+        })`;
+
+        dayMembersMap[weekDate.day].push(leaveStr);
+      }
+    });
+
+    // Append to result string
+    resultString += `${daysColor[index]}${formattedDate}(${weekDate.day}) : ${
+      dayMembersMap[weekDate.day].join(", ") || ""
+    }\n`;
+  });
+
+  return resultString;
 }

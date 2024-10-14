@@ -228,7 +228,7 @@ export async function showWaitApprove(
   const notApproveHHLists = await getNotApproveHHLists(pool);
 
   const replyMessage =
-    `✏️ รายการที่ยังรอ Approve ${
+    `✏️ รายการที่รอการ Approve ${
       optionStatus == "" ? "[ทั้งหมด]" : `[${optionStatus}]`
     }\n\n` +
     leaveDetails
@@ -594,7 +594,7 @@ export async function getWaitApprove(pool: pg.Pool) {
   const leaveDetails = rows as ILeaveSchedule[];
 
   const replyMessage =
-    "✏️ รายการที่ยังรอ Approve\n\n" +
+    "✏️ รายการที่รอการ Approve\n\n" +
     leaveDetails
       .map((detail) => {
         return `${getColorEmoji(detail.is_approve, detail.status)}<${

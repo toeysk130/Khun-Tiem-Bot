@@ -1,19 +1,25 @@
-import axios from "axios";
 import * as dotenv from "dotenv";
+import axios from "axios";
 import pg from "pg";
-import { getListToday, getWaitApprove } from "./leaveScheduleAPI";
-import { getNotApproveHHLists } from "./hhAPI";
+import {
+  getListToday,
+  getWaitApprove,
+  showListThisWeek,
+} from "../API/leaveScheduleAPI";
+import { getNotApproveHHLists } from "../repositories/happyHour";
+import { getCurrentDateString, getCurrentWeekDate } from "../utils/utils";
+import { buildWeeklyReport } from "../handlers/commands/reportRequest";
 
 // Setup
 dotenv.config();
 const pool = new pg.Pool();
 
-export async function pushMessage() {
+// Line Messaging API endpoint
+const LINE_API_URL = "https://api.line.me/v2/bot/message/push";
+
+export async function pushWeeklyMessage() {
   const LINE_ACCESS_TOKEN = process.env.CHANNEL_ACCESS_TOKEN || "";
   const GROUP_ID = process.env.GROUP_ID || "";
-
-  // Line Messaging API endpoint
-  const LINE_API_URL = "https://api.line.me/v2/bot/message/push";
 
   // Create an Axios instance with the Line API headers
   const axiosInstance = axios.create({
@@ -24,12 +30,13 @@ export async function pushMessage() {
     },
   });
 
-  const listToday = await getListToday(pool);
+  // Fetch leave details for the week
+  const leaveListThisWeeks = await buildWeeklyReport("วีคนี้");
 
   // Define the message you want to send
   const message1 = {
     type: "text",
-    text: "☀️ สวัสดียามเช้าที่สดใส ☀️\n\n" + listToday,
+    text: leaveListThisWeeks,
   };
 
   // Create the payload for the request
@@ -48,8 +55,6 @@ export async function pushMessage() {
       console.error("Error sending message:", error);
     });
 
-  // =======================================
-  // =======================================
   // =======================================
 
   const waitApprove = await getWaitApprove(pool);
@@ -77,14 +82,12 @@ export async function pushMessage() {
     });
 
   // =======================================
-  // =======================================
-  // =======================================
 
   const notApproveHHLists = await getNotApproveHHLists(pool);
 
   if (notApproveHHLists.length > 0) {
     const waitApproveHh =
-      "❤️ HH ที่นังรอ Approve\n\n" +
+      "❤️ HH ที่รอการ Approve\n\n" +
       notApproveHHLists
         .map((hh) => {
           return `🙅‍♂️ <${hh.id}> ${hh.member} ${hh.hours}h ${
