@@ -1,13 +1,8 @@
 import * as dotenv from "dotenv";
 import axios from "axios";
 import pg from "pg";
-import {
-  getListToday,
-  getWaitApprove,
-  showListThisWeek,
-} from "../API/leaveScheduleAPI";
+import { getWaitApprove } from "../API/leaveScheduleAPI";
 import { getNotApproveHHLists } from "../repositories/happyHour";
-import { getCurrentDateString, getCurrentWeekDate } from "../utils/utils";
 import { buildWeeklyReport } from "../handlers/commands/reportRequest";
 
 // Setup
@@ -46,7 +41,7 @@ export async function pushWeeklyMessage() {
   };
 
   // Send the message to the Line Group
-  axiosInstance
+  await axiosInstance
     .post("", payload1)
     .then((response) => {
       console.log("Message sent successfully:", response.data);
@@ -72,7 +67,7 @@ export async function pushWeeklyMessage() {
   };
 
   // Send the message to the Line Group
-  axiosInstance
+  await axiosInstance
     .post("", payload2)
     .then((response) => {
       console.log("Message sent successfully:", response.data);
@@ -111,7 +106,7 @@ export async function pushWeeklyMessage() {
     };
 
     // Send the message to the Line Group
-    axiosInstance
+    await axiosInstance
       .post("", payload3)
       .then((response) => {
         console.log("Message sent successfully:", response.data);
