@@ -1,7 +1,7 @@
 import { registerNewMember } from "../../API/leaveScheduleAPI";
 import { UserMetaData } from "../../types/interface";
 import { pushMsg } from "../../utils/sendLineMsg";
-import { client, pool } from "../handleIncomingMessage";
+import { client } from "../handleIncomingMessage";
 
 export async function handleRegisterCommand(userMetaData: UserMetaData) {
   if (userMetaData.username) {
@@ -9,8 +9,6 @@ export async function handleRegisterCommand(userMetaData: UserMetaData) {
     await pushMsg(client, userMetaData.replyToken, replyMessage);
   } else {
     await registerNewMember(
-      pool,
-      client,
       userMetaData.replyToken,
       userMetaData.userId,
       userMetaData.username

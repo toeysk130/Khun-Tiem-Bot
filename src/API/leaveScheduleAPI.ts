@@ -13,9 +13,7 @@ import { callQuery } from "../utils/query";
 import {
   delHhRecord,
   getAllRemainingHh,
-  getMyNotApproveHHLists,
   getNotApproveHHLists,
-  getNotApprvHh,
   getRemainingHh,
 } from "../repositories/happyHour";
 import { client } from "../handlers/handleIncomingMessage";
@@ -37,8 +35,6 @@ export async function getMemberDetails(
 }
 
 export async function registerNewMember(
-  pool: pg.Pool,
-  client: Client,
   replyToken: string,
   userId: string,
   userName: string
