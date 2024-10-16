@@ -10,6 +10,9 @@ import {
 } from "./commands/reportRequest";
 import { handleHhCommand } from "./commands/hhCommands";
 import { UserMetaData } from "../types/interface";
+import { handleUpdateRequest } from "./commands/updateRequests";
+import { pushMsg } from "../utils/sendLineMsg";
+import { client } from "./handleIncomingMessage";
 
 export async function commandDispatcher(
   userMetadata: UserMetaData,
@@ -45,5 +48,14 @@ export async function commandDispatcher(
     case "hh":
       await handleHhCommand(commandArr, userMetadata);
       break;
+    case "อัปเดต":
+      await handleUpdateRequest(commandArr, userMetadata);
+      break;
+    default:
+      await pushMsg(
+        client,
+        userMetadata.replyToken,
+        `ไม่รู้จักคำสั่ง '${command}'`
+      );
   }
 }
