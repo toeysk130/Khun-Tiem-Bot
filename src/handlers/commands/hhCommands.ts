@@ -88,11 +88,6 @@ async function handleAddHhRecord(
       hhAmt,
       description
     );
-    await pushMsg(
-      client,
-      replyToken,
-      `✅ เพิ่มชั่วโมง Happy Hour จำนวน ${hhAmt} ชั่วโมงสำเร็จ พร้อมคำอธิบาย: ${description}`
-    );
   } catch (error) {
     console.error("Error adding HH record:", error);
     await pushMsg(
