@@ -1,5 +1,8 @@
 import { handleRegisterCommand } from "./commands/registerMember";
-import { handleLeaveRequest } from "./commands/leaveRequest";
+import {
+  handleLeaveRequest,
+  handleNcLeaveRequest,
+} from "./commands/leaveRequest";
 import { handleShowCommands } from "./commands/showCommands";
 import { handleShowTableCommand } from "./commands/showTable";
 import { handleApproveCommand } from "./commands/approveRequest";
@@ -28,6 +31,9 @@ export async function commandDispatcher(
       break;
     case "แจ้งลา":
       await handleLeaveRequest(commandArr, userMetadata);
+      break;
+    case "nc":
+      await handleNcLeaveRequest(commandArr, userMetadata);
       break;
     case "ตาราง":
       await handleShowTableCommand(commandArr, userMetadata.replyToken);

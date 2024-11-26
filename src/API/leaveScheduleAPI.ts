@@ -115,10 +115,7 @@ export async function addNewLeaveRequest(
 }
 
 export async function addNewNcLeaveRequest(
-  pool: pg.Pool,
-  client: Client,
-  replyToken: string,
-  member: IMember,
+  userMetaData: UserMetaData,
   commandArr: string[]
 ) {
   const leaveKey = "key";
@@ -140,7 +137,7 @@ export async function addNewNcLeaveRequest(
 
   const values = [
     formattedDateTime,
-    member.name,
+    userMetaData.username,
     leaveType,
     formattedLeaveStartDate,
     formattedLeaveEndDate,
@@ -150,9 +147,9 @@ export async function addNewNcLeaveRequest(
     description,
     isApprove,
   ];
-  const successMsg = `🥰 Added new leave request for ${member.name} successfully`;
-  const failMsg = `😥 Failed to add new leave request for ${member.name}`;
-  await callQuery(replyToken, query, values, successMsg, failMsg);
+  const successMsg = `🥰 Added new leave request for ${userMetaData.username} successfully`;
+  const failMsg = `😥 Failed to add new leave request for ${userMetaData.username}`;
+  await callQuery(userMetaData.replyToken, query, values, successMsg, failMsg);
 }
 
 export async function addNewHhLeaveRequest(
