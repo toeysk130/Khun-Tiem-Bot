@@ -20,7 +20,9 @@ export async function handleIncomingMessage(
   event: WebhookEvent,
   userMetadata: UserMetaData
 ) {
-  console.log(" called handleIncomingMessage");
+  console.log(
+    ":::::::::::::::::::::::::::::::::::::: called handleIncomingMessage"
+  );
   if (event.type !== "message" || event.message.type !== "text") return;
 
   const textMessage = event.message as TextEventMessage;
@@ -50,6 +52,7 @@ export async function handleIncomingMessage(
   }
 
   console.log("User Metadata: ", userMetadata);
+  console.log("receivedText:", receivedText);
 
   // Dispatch command based on user metadata and the command type
   await commandDispatcher(userMetadata, command, commandArr);

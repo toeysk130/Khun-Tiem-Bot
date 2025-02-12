@@ -106,8 +106,9 @@ async function handleUseHhRequest(
 ) {
   const isValidRequest = await validateHhRequest(userMetaData, commandArr);
 
+  // BUG: Prevents reusing of reply token
   if (!isValidRequest) {
-    return pushMsg(client, replyToken, `❌ คำขอ Happy Hour ไม่ถูกต้อง`);
+    return;
   }
 
   try {
