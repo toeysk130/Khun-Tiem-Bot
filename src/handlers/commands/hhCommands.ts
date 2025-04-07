@@ -105,7 +105,7 @@ async function handleUseHhRequest(
   replyToken: string
 ) {
   const isValidRequest = await validateHhRequest(userMetaData, commandArr);
-
+  console.table(isValidRequest);
   // BUG: Prevents reusing of reply token
   if (!isValidRequest) {
     return;
@@ -119,7 +119,6 @@ async function handleUseHhRequest(
       userMetaData.username,
       commandArr
     );
-    await pushMsg(client, replyToken, `✅ ใช้ชั่วโมง Happy Hour สำเร็จ`);
   } catch (error) {
     console.error("Error processing HH request:", error);
     await pushMsg(
