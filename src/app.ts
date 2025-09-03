@@ -1,6 +1,7 @@
 import * as dotenv from "dotenv";
 import bodyParser from "body-parser";
 import express from "express";
+import path from "path";
 import { webhookRouter } from "./routes/webhook";
 import { setupCronJobs } from "./cron/cronJobs";
 import { pushWeeklyMessage } from "./cron/pushMessage";
@@ -16,6 +17,9 @@ const port = process.env.PORT || 3333;
 app.use(bodyParser.json());
 app.use(bodyParser.raw({ type: "application/vnd.custom-type" }));
 app.use(bodyParser.text({ type: "text/html" }));
+
+// Static files for downloads
+app.use("/download", express.static(path.join(__dirname, "..")));
 
 // Routes
 app.get("/", (req, res) => {
