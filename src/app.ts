@@ -25,6 +25,7 @@ app.use("/download", express.static(path.join(__dirname, "..")));
 // Routes
 app.get("/", (req, res) => {
   res.send("Server is running");
+  console.log("requested at /", req);
 });
 
 app.get("/cron", async (req, res) => {
@@ -67,7 +68,7 @@ app.get("/download/safe", (req, res) => {
 });
 
 // Webhook Route
-app.use("/webhook", webhookRouter);
+app.use("/webhook", web hookRouter);
 
 // Start Cron Jobs
 setupCronJobs();
