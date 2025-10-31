@@ -68,7 +68,7 @@ app.get("/download/safe", (req, res) => {
 });
 
 // Webhook Route
-app.use("/webhook", web hookRouter);
+app.use("/webhook", webhookRouter);
 
 // Start Cron Jobs
 setupCronJobs();
