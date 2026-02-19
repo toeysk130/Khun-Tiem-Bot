@@ -648,13 +648,13 @@ describe("Command Handlers", () => {
       });
 
       await handleSummaryCommand(["สรุป"], mockUserMetadata);
-      expect(lineClient.replyMessage).toHaveBeenCalledWith(
-        mockUserMetadata.replyToken,
-        expect.objectContaining({
-          type: "flex",
-          altText: expect.stringContaining("สรุปวันลาของ testuser"),
-        }),
-      );
+      expect(lineClient.replyMessage).toHaveBeenCalled();
+      const callArgs = lineClient.replyMessage.mock.calls[0];
+      expect(callArgs[0]).toBe(mockUserMetadata.replyToken);
+      expect(callArgs[1][0]).toMatchObject({
+        type: "flex",
+        altText: expect.stringContaining("สรุปวันลาของ testuser"),
+      });
     });
 
     it("should show empty summary message", async () => {
@@ -700,13 +700,13 @@ describe("Command Handlers", () => {
         .mockResolvedValueOnce({ rows: [{ total: "3" }] });
 
       await handleStatsCommand(["สถิติ"], mockUserMetadata);
-      expect(lineClient.replyMessage).toHaveBeenCalledWith(
-        mockUserMetadata.replyToken,
-        expect.objectContaining({
-          type: "flex",
-          altText: expect.stringContaining("สถิติ"),
-        }),
-      );
+      expect(lineClient.replyMessage).toHaveBeenCalled();
+      const callArgs = lineClient.replyMessage.mock.calls[0];
+      expect(callArgs[0]).toBe(mockUserMetadata.replyToken);
+      expect(callArgs[1][0]).toMatchObject({
+        type: "flex",
+        altText: expect.stringContaining("สถิติ"),
+      });
     });
   });
 

@@ -1,16 +1,18 @@
-import { UserMetaData } from "../../types/interface";
-import { replyMessage, replyFlexMessage } from "../../utils/sendLineMsg";
-import { lineClient } from "../../configs/lineClient";
 import { pool } from "../../configs/database";
+import { lineClient } from "../../configs/lineClient";
+import { getAllRemainingHh } from "../../repositories/happyHour";
 import {
   getAllMembersSummary,
   getLeaveSummaryByMember,
 } from "../../repositories/leaveScheduleRepository";
-import { getAllRemainingHh } from "../../repositories/happyHour";
+import { summarizeData } from "../../services/openaiService";
+import { UserMetaData } from "../../types/interface";
 import {
   buildSummaryBubble,
   buildTeamSummaryCarousel,
 } from "../../utils/flexMessage";
+import { replyMessage, replyMessages } from "../../utils/sendLineMsg";
+import { Message } from "@line/bot-sdk";
 
 function getCurrentYear(): number {
   return new Date().getFullYear();
@@ -90,7 +92,23 @@ async function showMySummary(userMetaData: UserMetaData, year?: number) {
     summaryRows,
     totalDays,
   );
-  await replyFlexMessage(lineClient, userMetaData.replyToken, flexMsg);
+
+  const messages: Message[] = [flexMsg];
+
+  const dataContext = `สรุปวันลาของ ${userMetaData.username} (${yearLabel}):
+${summaryRows.map((r) => `- ${r.type}: ${r.days} วัน (${r.count} ครั้ง)`).join("\n")}
+- รวม: ${totalDays} วัน
+ช่วยวิเคราะห์ให้หน่อย`;
+
+  const aiSummary = await summarizeData(dataContext);
+  if (aiSummary) {
+    messages.push({
+      type: "text",
+      text: `🤖 ขุนเทียมวิเคราะห์:\n${aiSummary}`,
+    });
+  }
+
+  await replyMessages(lineClient, userMetaData.replyToken, messages);
 }
 
 async function showAllSummary(userMetaData: UserMetaData, year?: number) {
@@ -136,5 +154,20 @@ async function showAllSummary(userMetaData: UserMetaData, year?: number) {
   }));
 
   const flexMsg = buildTeamSummaryCarousel(memberSummaries);
-  await replyFlexMessage(lineClient, userMetaData.replyToken, flexMsg);
+
+  const messages: Message[] = [flexMsg];
+
+  const dataContext = `สรุปวันลาทั้งทีม (${yearLabel}):
+${memberSummaries.map((m) => `- ${m.member}: ${m.totalDays} วัน (HH เหลือ ${m.hhRemaining}h)`).join("\n")}
+ช่วยวิเคราะห์ภาพรวมทีมให้หน่อย`;
+
+  const aiSummary = await summarizeData(dataContext);
+  if (aiSummary) {
+    messages.push({
+      type: "text",
+      text: `🤖 ขุนเทียมวิเคราะห์:\n${aiSummary}`,
+    });
+  }
+
+  await replyMessages(lineClient, userMetaData.replyToken, messages);
 }

@@ -69,3 +69,18 @@ export async function generateDailyGreeting(
   const result = await callOpenAI(systemPrompt, userMsg, 200);
   return result || "";
 }
+
+export async function summarizeData(dataContext: string): Promise<string> {
+  const systemPrompt = `คุณชื่อ ขุนเทียม เป็น Bot ผู้ช่วยทีมพัฒนาซอฟต์แวร์
+คุณต้องสรุปข้อมูลที่ได้รับเป็นภาษาคนสั้นๆ (2-4 บรรทัด) ใส่ emoji
+กฎ:
+- วิเคราะห์ข้อมูลและให้ insight ที่น่าสนใจ
+- ใช้ภาษาไทยแบบเป็นกันเอง ตลกนิดๆ
+- ถ้าคนลาเยอะ ก็แซวเบาๆ
+- ถ้าคนไม่ค่อยลา ก็ชมว่าขยัน
+- ห้ามใช้คำหยาบ ห้ามซ้ำข้อมูลเดิม
+- ตอบเฉพาะข้อความสรุป ไม่ต้องมี prefix`;
+
+  const result = await callOpenAI(systemPrompt, dataContext, 200);
+  return result || "";
+}
