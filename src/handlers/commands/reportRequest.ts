@@ -21,6 +21,7 @@ import {
 import { ILeaveSchedule, UserMetaData } from "../../types/interface";
 import {
   buildMonthlyCarousel,
+  buildPersonalReportBubble,
   buildSummaryBubble,
   buildTodayReportBubble,
   buildWeeklyReportBubble,
@@ -34,26 +35,32 @@ import {
   getNextWeektDateString,
 } from "../../utils/utils";
 
+function getCurrentYear(): number {
+  return new Date().getFullYear();
+}
+
 export async function handleReportCommand(
   commandArr: string[],
   userMetaData: UserMetaData,
 ) {
-  if (commandArr.length !== 2) {
+  if (commandArr.length < 2 || commandArr.length > 3) {
     return replyMessage(
       lineClient,
       userMetaData.replyToken,
-      `⚠️ Invalid usage of the "รายงาน" command. Example: "รายงาน วันนี้", "รายงาน วีคนี้", "รายงาน ของฉัน", "รายงาน เดือนนี้"`,
+      `⚠️ Invalid usage of the "รายงาน" command. Example: "รายงาน วันนี้", "รายงาน ของฉัน", "รายงาน ของฉัน ทั้งหมด"`,
     );
   }
 
   const reportType = commandArr[1];
+  const showAll = commandArr[2] === "ทั้งหมด";
+  const year = showAll ? undefined : getCurrentYear();
 
   switch (reportType) {
     case "วันนี้":
       await handleTodayReport(userMetaData.replyToken);
       break;
     case "ของฉัน":
-      await handleMyReport(userMetaData, userMetaData.replyToken);
+      await handleMyReport(userMetaData, userMetaData.replyToken, year);
       break;
     case "วีคนี้":
     case "วีคหน้า":
@@ -66,7 +73,7 @@ export async function handleReportCommand(
       await replyMessage(
         lineClient,
         userMetaData.replyToken,
-        `⛔ ตัวเลือก '${reportType}' ไม่มีในระบบ. Available options: "ของฉัน", "วันนี้", "วีคนี้", "วีคหน้า", "เดือนนี้"`,
+        `⛔ ตัวเลือก '${reportType}' ไม่มีในระบบ. Available options: "ของฉัน", "วันนี้", "วีคนี้", "วีคหน้า", "เดือนนี้"\n💡 เพิ่ม "ทั้งหมด" หลังคำสั่ง เพื่อดูย้อนหลัง เช่น: "รายงาน ของฉัน ทั้งหมด"`,
       );
       break;
   }
@@ -78,7 +85,9 @@ export async function handleOtherReport(
 ) {
   try {
     const targetName = commandArr[1];
-    await showMyList(targetName, userMetaData.replyToken);
+    const showAll = commandArr[2] === "ทั้งหมด";
+    const year = showAll ? undefined : getCurrentYear();
+    await showMyList(targetName, userMetaData.replyToken, year);
   } catch (error) {
     console.error("Error fetching user's report:", error);
     await replyMessage(
@@ -135,9 +144,13 @@ async function handleTodayReport(replyToken: string) {
   }
 }
 
-async function handleMyReport(userMetaData: UserMetaData, replyToken: string) {
+async function handleMyReport(
+  userMetaData: UserMetaData,
+  replyToken: string,
+  year?: number,
+) {
   try {
-    await showMyList(userMetaData.username, replyToken);
+    await showMyList(userMetaData.username, replyToken, year);
   } catch (error) {
     console.error("Error fetching user's report:", error);
     await replyMessage(
@@ -212,37 +225,31 @@ async function handleMonthlyReport(replyToken: string) {
   }
 }
 
-async function showMyList(member: string, replyToken: string) {
+async function showMyList(member: string, replyToken: string, year?: number) {
+  const yearLabel = year ? `ปี ${year}` : "ทั้งหมด";
   const [leaveDetails, hhDetails] = await Promise.all([
-    getLeaveScheduleByMember(pool, member),
+    getLeaveScheduleByMember(pool, member, year),
     getNotApprovedHh(pool, member),
   ]);
 
   const { notApprvHh, remainingHh, notApproveHHLists } = hhDetails;
 
-  const formattedLeaveDetails = leaveDetails
-    .map((detail) => formatLeaveDetailWithKey(detail))
-    .join("\n");
+  const flexMsg = buildPersonalReportBubble(
+    member,
+    leaveDetails,
+    {
+      notApproved: notApprvHh,
+      remaining: remainingHh,
+      pendingHH: notApproveHHLists.map((hh) => ({
+        id: hh.id,
+        hours: hh.hours,
+        description: hh.description || "",
+      })),
+    },
+    yearLabel,
+  );
 
-  const formattedHHDetails = notApproveHHLists
-    .map(
-      (hh) =>
-        `🙅‍♂️ <${hh.id}> ${hh.member} ${hh.hours}h ${
-          hh.description ? `(${hh.description})` : ""
-        }`,
-    )
-    .join("\n");
-
-  const msg =
-    `✏️ รายการทั้งหมดของ ${member}\n___________\n` +
-    `🙅‍♂️ hh ที่รอ approve ${notApprvHh} hours\n` +
-    `❤️ hh คงเหลือ ${remainingHh} hours\n___________\n` +
-    formattedLeaveDetails +
-    "\n___________\n" +
-    "❤️ HH ที่รอการ Approve\n" +
-    formattedHHDetails;
-
-  await replyMessage(lineClient, replyToken, msg);
+  await replyFlexMessage(lineClient, replyToken, flexMsg);
 }
 
 // ── Exported for cron/pushMessage ──

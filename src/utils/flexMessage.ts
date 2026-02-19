@@ -626,62 +626,120 @@ export function buildDeleteConfirmBubble(
   };
 }
 
-export function buildFunStatsBubble(stats: {
-  totalLeaves: number;
-  totalMembers: number;
-  topLeaver: { name: string; days: number } | null;
-  mostPopularType: { type: string; count: number } | null;
-  busiestDay: { day: string; count: number } | null;
-  avgLeavesPerPerson: number;
-}): FlexMessage {
+export function buildMonthlyStatsBubble(
+  monthName: string,
+  current: {
+    total: number;
+    totalDays: number;
+    totalMembers: number;
+    topLeaver: { name: string; days: number } | null;
+    mostPopularType: { type: string; count: number } | null;
+    busiestDay: { day: string; count: number } | null;
+  },
+  prev: {
+    total: number;
+    totalDays: number;
+    topLeaver: { name: string; days: number } | null;
+  },
+  prevMonthName: string,
+): FlexMessage {
+  const avgPerPerson =
+    current.totalMembers > 0
+      ? Math.round((current.totalDays / current.totalMembers) * 10) / 10
+      : 0;
+
+  // Fun comparison messages
+  const funComparisons: string[] = [];
+  const diff = current.total - prev.total;
+  if (diff > 0) {
+    funComparisons.push(
+      `📈 ลามากกว่าเดือน${prevMonthName} ${diff} ครั้ง... ทำงานหนักมากใช่มั้ยทุกคน? 😅`,
+    );
+  } else if (diff < 0) {
+    funComparisons.push(
+      `📉 ลาน้อยกว่าเดือน${prevMonthName} ${Math.abs(diff)} ครั้ง! ขยันกันจัง 💪`,
+    );
+  } else {
+    funComparisons.push(
+      `🤝 ลาเท่าเดือน${prevMonthName}เป๊ะ... นัดกันมาละหรอ? 🤔`,
+    );
+  }
+
+  if (current.topLeaver && prev.topLeaver) {
+    if (current.topLeaver.name === prev.topLeaver.name) {
+      funComparisons.push(
+        `🔥 ${current.topLeaver.name} ครองแชมป์ 2 เดือนซ้อน! อยู่ออฟฟิศบ้างนะ 😂`,
+      );
+    }
+  }
+
+  if (current.total === 0) {
+    funComparisons.push(
+      "🎉 ไม่มีใครลาเลย! ทีมเราเป็นทีมในฝัน... หรือลืมแจ้ง? 🤣",
+    );
+  }
+
   const rows: any[] = [
-    buildStatRow("👥 จำนวนสมาชิก", `${stats.totalMembers} คน`),
-    buildStatRow("📝 รายการลาทั้งหมด", `${stats.totalLeaves} ครั้ง`),
-    buildStatRow("📊 เฉลี่ยต่อคน", `${stats.avgLeavesPerPerson} วัน`),
+    buildStatRow("📝 รายการลาเดือนนี้", `${current.total} ครั้ง`),
+    buildStatRow("📊 รวม", `${current.totalDays} วัน`),
+    buildStatRow("📊 เฉลี่ยต่อคน", `${avgPerPerson} วัน`),
   ];
 
-  if (stats.topLeaver) {
+  if (current.topLeaver) {
     rows.push(
       buildStatRow(
-        "🏆 คนลามากสุด",
-        `${stats.topLeaver.name} (${stats.topLeaver.days} วัน)`,
+        "🏆 แชมป์ลามากสุด",
+        `${current.topLeaver.name} (${current.topLeaver.days} วัน)`,
       ),
     );
   }
-  if (stats.mostPopularType) {
+  if (current.mostPopularType) {
     rows.push(
       buildStatRow(
         "📋 ประเภทยอดฮิต",
-        `${stats.mostPopularType.type} (${stats.mostPopularType.count} ครั้ง)`,
+        `${current.mostPopularType.type} (${current.mostPopularType.count} ครั้ง)`,
       ),
     );
   }
-  if (stats.busiestDay) {
+  if (current.busiestDay) {
     rows.push(
       buildStatRow(
         "📅 วันลายอดฮิต",
-        `${stats.busiestDay.day} (${stats.busiestDay.count} คน)`,
+        `${current.busiestDay.day} (${current.busiestDay.count} คน)`,
       ),
     );
   }
 
+  // Add fun comparison as separator + text
+  rows.push({ type: "separator" as const, margin: "lg" as const });
+  funComparisons.forEach((msg) => {
+    rows.push({
+      type: "text" as const,
+      text: msg,
+      size: "xs" as const,
+      color: COLORS.muted,
+      wrap: true,
+      margin: "sm" as const,
+    });
+  });
+
   const bubble: FlexBubble = {
     type: "bubble",
-    size: "kilo",
+    size: "mega",
     header: {
       type: "box",
       layout: "vertical",
       contents: [
         {
           type: "text",
-          text: "🏆 สถิติทีม",
+          text: `🏆 สถิติเดือน${monthName}`,
           weight: "bold",
           size: "lg",
           color: "#FFFFFF",
         },
         {
           type: "text",
-          text: "ข้อมูลสนุกๆ ของทีมเรา",
+          text: "ข้อมูลสนุกๆ ของทีมเรา 😎",
           size: "xs",
           color: "#FFFFFFCC",
         },
@@ -698,7 +756,167 @@ export function buildFunStatsBubble(stats: {
     },
   };
 
-  return { type: "flex", altText: "🏆 สถิติสนุกๆ ของทีม", contents: bubble };
+  return {
+    type: "flex",
+    altText: `🏆 สถิติเดือน${monthName}`,
+    contents: bubble,
+  };
+}
+
+export function buildPersonalReportBubble(
+  member: string,
+  leaves: ILeaveSchedule[],
+  hhInfo: {
+    notApproved: number;
+    remaining: number;
+    pendingHH: { id: number; hours: number; description: string }[];
+  },
+  yearLabel: string,
+): FlexMessage {
+  const leaveRows = leaves.slice(0, 15).map((l) => ({
+    type: "box" as const,
+    layout: "horizontal" as const,
+    spacing: "sm" as const,
+    margin: "sm" as const,
+    contents: [
+      {
+        type: "text" as const,
+        text: statusEmoji(l.is_approve, l.status),
+        size: "sm" as const,
+        flex: 0,
+      },
+      {
+        type: "text" as const,
+        text: `<${l.id}>`,
+        size: "xxs" as const,
+        flex: 1,
+        color: COLORS.muted,
+      },
+      {
+        type: "text" as const,
+        text: l.leave_type,
+        size: "xs" as const,
+        flex: 2,
+        color: COLORS.dark,
+      },
+      {
+        type: "text" as const,
+        text: getDisplayLeaveDate(l.leave_start_dt, l.leave_end_dt),
+        size: "xxs" as const,
+        flex: 3,
+        color: COLORS.muted,
+        align: "end" as const,
+      },
+    ],
+  }));
+
+  const bodyContents: any[] = [
+    {
+      type: "box" as const,
+      layout: "horizontal" as const,
+      contents: [
+        {
+          type: "text" as const,
+          text: `🙅‍♂️ HH รอ approve: ${hhInfo.notApproved}h`,
+          size: "xs" as const,
+          color: COLORS.warning,
+          flex: 1,
+        },
+        {
+          type: "text" as const,
+          text: `❤️ HH เหลือ: ${hhInfo.remaining}h`,
+          size: "xs" as const,
+          color: COLORS.success,
+          flex: 1,
+          align: "end" as const,
+        },
+      ],
+    },
+    { type: "separator" as const, margin: "md" as const },
+    ...(leaveRows.length > 0
+      ? leaveRows
+      : [
+          {
+            type: "text" as const,
+            text: "ยังไม่มีรายการลา 🎉",
+            size: "sm" as const,
+            color: COLORS.muted,
+            margin: "md" as const,
+            align: "center" as const,
+          },
+        ]),
+  ];
+
+  if (leaves.length > 15) {
+    bodyContents.push({
+      type: "text" as const,
+      text: `... อีก ${leaves.length - 15} รายการ`,
+      size: "xxs" as const,
+      color: COLORS.muted,
+      margin: "sm" as const,
+      align: "center" as const,
+    });
+  }
+
+  // HH pending section
+  if (hhInfo.pendingHH.length > 0) {
+    bodyContents.push({ type: "separator" as const, margin: "md" as const });
+    bodyContents.push({
+      type: "text" as const,
+      text: "❤️ HH ที่รอ Approve",
+      size: "xs" as const,
+      color: COLORS.hh,
+      weight: "bold" as const,
+      margin: "md" as const,
+    });
+    hhInfo.pendingHH.forEach((hh) => {
+      bodyContents.push({
+        type: "text" as const,
+        text: `🙅‍♂️ <${hh.id}> ${hh.hours}h ${hh.description ? `(${hh.description})` : ""}`,
+        size: "xxs" as const,
+        color: COLORS.dark,
+        margin: "sm" as const,
+      });
+    });
+  }
+
+  const bubble: FlexBubble = {
+    type: "bubble",
+    size: "mega",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: `📋 ${member}`,
+          weight: "bold",
+          size: "md",
+          color: "#FFFFFF",
+        },
+        {
+          type: "text",
+          text: `${yearLabel} • ${leaves.length} รายการ`,
+          size: "xs",
+          color: "#FFFFFFCC",
+        },
+      ],
+      backgroundColor: COLORS.primary,
+      paddingAll: "12px",
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      contents: bodyContents,
+      paddingAll: "12px",
+    },
+  };
+
+  return {
+    type: "flex",
+    altText: `📋 รายการของ ${member} (${yearLabel})`,
+    contents: bubble,
+  };
 }
 
 // ── Helper builders ──

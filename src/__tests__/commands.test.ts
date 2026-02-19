@@ -685,18 +685,26 @@ describe("Command Handlers", () => {
   // ══════════════════════════════════════════════════════════
 
   describe("handleStatsCommand", () => {
-    it("should return Flex Message with team stats", async () => {
+    it("should return Flex Message with monthly stats", async () => {
       const {
         handleStatsCommand,
       } = require("../handlers/commands/statsCommand");
+      // getMonthlyStats called twice (current + prev), each does 5 queries
       pool.query
-        .mockResolvedValueOnce({ rows: [{ total: "10" }] }) // totalLeaves
-        .mockResolvedValueOnce({ rows: [{ total: "3" }] }) // totalMembers
-        .mockResolvedValueOnce({ rows: [{ member: "Alice", total_days: "5" }] }) // topLeaver
+        // Current month
+        .mockResolvedValueOnce({ rows: [{ total: "10", total_days: "8" }] })
+        .mockResolvedValueOnce({ rows: [{ member: "Alice", days: "5" }] })
         .mockResolvedValueOnce({
           rows: [{ leave_type: "ลาพักร้อน", cnt: "6" }],
-        }) // popularType
-        .mockResolvedValueOnce({ rows: [{ day_name: "Monday", cnt: "4" }] }); // busiestDay
+        })
+        .mockResolvedValueOnce({ rows: [{ day_name: "Monday", cnt: "4" }] })
+        .mockResolvedValueOnce({ rows: [{ total: "3" }] })
+        // Previous month
+        .mockResolvedValueOnce({ rows: [{ total: "7", total_days: "5" }] })
+        .mockResolvedValueOnce({ rows: [{ member: "Bob", days: "3" }] })
+        .mockResolvedValueOnce({ rows: [{ leave_type: "ลาป่วย", cnt: "3" }] })
+        .mockResolvedValueOnce({ rows: [{ day_name: "Friday", cnt: "2" }] })
+        .mockResolvedValueOnce({ rows: [{ total: "3" }] });
 
       await handleStatsCommand(["สถิติ"], mockUserMetadata);
       expect(lineClient.replyMessage).toHaveBeenCalledWith(
