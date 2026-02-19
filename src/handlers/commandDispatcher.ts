@@ -1,8 +1,11 @@
 import { lineClient } from "../configs/lineClient";
-import { pushSingleMessage } from "../cron/pushMessage";
 import { generateAIComment } from "../services/openaiService";
 import { UserMetaData } from "../types/interface";
-import { replyMessage } from "../utils/sendLineMsg";
+import {
+  flushReplyBuffer,
+  replyMessage,
+  startReplyBuffer,
+} from "../utils/sendLineMsg";
 import { handleApproveCommand } from "./commands/approveRequest";
 import { handleAskAICommand } from "./commands/askAICommand";
 import { handleDeleteMemberCommand } from "./commands/deleteMember";
@@ -23,18 +26,43 @@ import { handleShowTableCommand } from "./commands/showTable";
 import { handleStatsCommand } from "./commands/statsCommand";
 import { handleSummaryCommand } from "./commands/summaryCommand";
 import { handleUpdateRequest } from "./commands/updateRequests";
+import { Message } from "@line/bot-sdk";
 
 // Commands that already use AI — skip AI follow-up to avoid double calls
 const AI_POWERED_COMMANDS = ["ขุนเทียม", "ฝากด่า", "สถิติ", "สรุป"];
 
 // Commands that are view-only — skip AI follow-up to avoid noise
-const QUIET_COMMANDS = ["คำสั่ง", "ตาราง", "รายงาน", "รายการ", "แอบดู", "cron"];
+const QUIET_COMMANDS = [
+  "คำสั่ง",
+  "ตาราง",
+  "รายงาน",
+  "รายการ",
+  "แอบดู",
+  "เตือน",
+];
 
 export async function commandDispatcher(
   userMetadata: UserMetaData,
   command: string,
   commandArr: string[],
 ) {
+  const skipAI =
+    AI_POWERED_COMMANDS.includes(command) || QUIET_COMMANDS.includes(command);
+
+  // Start buffering replies so we can bundle AI comment together
+  if (!skipAI) {
+    startReplyBuffer(userMetadata.replyToken);
+  }
+
+  // Start AI generation in parallel with the handler for speed
+  const aiPromise = !skipAI
+    ? generateAIComment(
+        userMetadata.username,
+        commandArr.join(" "),
+        true,
+      ).catch(() => null)
+    : Promise.resolve(null);
+
   let wasSuccessful = true;
 
   try {
@@ -102,24 +130,24 @@ export async function commandDispatcher(
     console.error("Command dispatch error:", error);
   }
 
-  // AI follow-up comment (fire-and-forget)
-  const skipAI =
-    AI_POWERED_COMMANDS.includes(command) || QUIET_COMMANDS.includes(command);
-
+  // Flush buffer — bundle handler reply + AI comment in ONE reply (free!)
   if (!skipAI) {
-    const targetId = userMetadata.groupId || userMetadata.userId;
-    generateAIComment(
-      userMetadata.username,
-      commandArr.join(" "),
-      wasSuccessful,
-    )
-      .then((comment) => {
-        if (comment) {
-          pushSingleMessage(`🤖 ${comment}`, targetId);
+    const extraMessages: Message[] = [];
+
+    if (wasSuccessful) {
+      try {
+        const aiComment = await Promise.race([
+          aiPromise,
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
+        ]);
+        if (aiComment) {
+          extraMessages.push({ type: "text", text: `🤖 ${aiComment}` });
         }
-      })
-      .catch(() => {
-        // AI comment is optional — silently ignore errors
-      });
+      } catch {
+        // AI is optional — silently ignore
+      }
+    }
+
+    await flushReplyBuffer(lineClient, userMetadata.replyToken, extraMessages);
   }
 }
