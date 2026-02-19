@@ -14,13 +14,15 @@ import {
 import { handleHhCommand } from "./commands/hhCommands";
 import { UserMetaData } from "../types/interface";
 import { handleUpdateRequest } from "./commands/updateRequests";
-import { pushMsg } from "../utils/sendLineMsg";
-import { client } from "./handleIncomingMessage";
+import { handleDeleteRequest } from "./commands/deleteRequest";
+import { handleSummaryCommand } from "./commands/summaryCommand";
+import { replyMessage } from "../utils/sendLineMsg";
+import { lineClient } from "../configs/lineClient";
 
 export async function commandDispatcher(
   userMetadata: UserMetaData,
   command: string,
-  commandArr: string[]
+  commandArr: string[],
 ) {
   switch (command) {
     case "คำสั่ง":
@@ -57,11 +59,17 @@ export async function commandDispatcher(
     case "อัปเดต":
       await handleUpdateRequest(commandArr, userMetadata);
       break;
+    case "ลบ":
+      await handleDeleteRequest(commandArr, userMetadata);
+      break;
+    case "สรุป":
+      await handleSummaryCommand(commandArr, userMetadata);
+      break;
     default:
-      await pushMsg(
-        client,
+      await replyMessage(
+        lineClient,
         userMetadata.replyToken,
-        `ไม่รู้จักคำสั่ง '${command}'`
+        `ไม่รู้จักคำสั่ง '${command}'`,
       );
   }
 }

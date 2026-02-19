@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import { WebhookEvent } from "@line/bot-sdk";
 import { handleIncomingMessage } from "../handlers/handleIncomingMessage";
 import { UserMetaData } from "../types/interface";
+import { commandQueue } from "../queue/commandQueue";
 
 export const webhookRouter = express.Router();
 
@@ -14,9 +15,11 @@ webhookRouter.post("/", async (req: Request, res: Response) => {
     return res.sendStatus(200);
   }
 
+  // Respond 200 OK immediately to prevent LINE timeout (must respond within 1 second)
+  res.sendStatus(200);
+
   const userId = events[0].source.userId || "";
   const groupId = (events[0].source as { groupId?: string }).groupId || "";
-  // Determine the type of chat: "GROUP" if both userId and groupId exist, otherwise it's "PERSONAL" (direct message).
   const chatType = userId && groupId ? "GROUP" : "PERSONAL";
 
   const userMetadata: UserMetaData = {
@@ -32,7 +35,14 @@ webhookRouter.post("/", async (req: Request, res: Response) => {
   if (chatType === "PERSONAL" || [process.env.ADMIN_ID].includes(userId)) {
     for (const event of events) {
       if (event.type === "message") {
-        await handleIncomingMessage(event, userMetadata);
+        // Enqueue each command for controlled concurrency
+        commandQueue
+          .enqueue(async () => {
+            await handleIncomingMessage(event, { ...userMetadata });
+          })
+          .catch((error) => {
+            console.error("Error processing queued command:", error);
+          });
       }
     }
   }
@@ -44,11 +54,14 @@ webhookRouter.post("/", async (req: Request, res: Response) => {
   ) {
     for (const event of events) {
       if (event.type === "message") {
-        await handleIncomingMessage(event, userMetadata);
+        commandQueue
+          .enqueue(async () => {
+            await handleIncomingMessage(event, { ...userMetadata });
+          })
+          .catch((error) => {
+            console.error("Error processing queued command:", error);
+          });
       }
     }
   }
-
-  // Send 200 OK status after processing
-  res.sendStatus(200);
 });

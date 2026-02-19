@@ -1,157 +1,94 @@
 import * as dotenv from "dotenv";
 import axios from "axios";
-import pg from "pg";
-import { getWaitApprove } from "../API/leaveScheduleAPI";
+import { pool } from "../configs/database";
 import { getNotApproveHHLists } from "../repositories/happyHour";
 import { buildWeeklyReport } from "../handlers/commands/reportRequest";
+import { getAllWaitingApproval } from "../repositories/leaveScheduleRepository";
+import { getColorEmoji, getDisplayLeaveDate } from "../utils/utils";
 
-// Setup
 dotenv.config();
-const pool = new pg.Pool();
 
-// Line Messaging API endpoint
 const LINE_API_URL = "https://api.line.me/v2/bot/message/push";
 
-export async function pushWeeklyMessage() {
+function createAxiosInstance() {
   const LINE_ACCESS_TOKEN = process.env.CHANNEL_ACCESS_TOKEN || "";
-  const GROUP_ID = process.env.GROUP_ID || "";
-
-  // Create an Axios instance with the Line API headers
-  const axiosInstance = axios.create({
+  return axios.create({
     baseURL: LINE_API_URL,
     headers: {
       Authorization: `Bearer ${LINE_ACCESS_TOKEN}`,
       "Content-Type": "application/json",
     },
   });
+}
 
-  // Fetch leave details for the week
+export async function pushWeeklyMessage() {
+  const GROUP_ID = process.env.GROUP_ID || "";
+  const axiosInstance = createAxiosInstance();
+
+  // 1. Weekly leave report
   const leaveListThisWeeks = await buildWeeklyReport("วีคนี้");
-
-  // Define the message you want to send
-  const message1 = {
-    type: "text",
-    text: leaveListThisWeeks,
-  };
-
-  // Create the payload for the request
-  const payload1 = {
-    to: GROUP_ID,
-    messages: [message1],
-  };
-
-  // Send the message to the Line Group
   await axiosInstance
-    .post("", payload1)
-    .then((response) => {
-      console.log("Message sent successfully:", response.data);
+    .post("", {
+      to: GROUP_ID,
+      messages: [{ type: "text", text: leaveListThisWeeks }],
     })
-    .catch((error) => {
-      console.error("Error sending message:", error);
-    });
+    .then((response) => console.log("Weekly report sent:", response.data))
+    .catch((error) => console.error("Error sending weekly report:", error));
 
-  // =======================================
+  // 2. Wait approve list
+  const waitingLeaves = await getAllWaitingApproval(pool);
+  const waitApproveMsg =
+    "✏️ รายการที่รอการ Approve\n\n" +
+    waitingLeaves
+      .map(
+        (detail) =>
+          `${getColorEmoji(detail.is_approve, detail.status)}<${detail.id}> ${
+            detail.member
+          } ${detail.leave_type} ${getDisplayLeaveDate(
+            detail.leave_start_dt,
+            detail.leave_end_dt,
+          )} ${detail.period_detail} ${detail.status}`,
+      )
+      .join("\n");
 
-  const waitApprove = await getWaitApprove(pool);
-
-  // Define the message you want to send
-  const message2 = {
-    type: "text",
-    text: waitApprove,
-  };
-
-  // Create the payload for the request
-  const payload2 = {
-    to: GROUP_ID,
-    messages: [message2],
-  };
-
-  // Send the message to the Line Group
   await axiosInstance
-    .post("", payload2)
-    .then((response) => {
-      console.log("Message sent successfully:", response.data);
+    .post("", {
+      to: GROUP_ID,
+      messages: [{ type: "text", text: waitApproveMsg }],
     })
-    .catch((error) => {
-      console.error("Error sending message:", error);
-    });
+    .then((response) => console.log("Wait approve list sent:", response.data))
+    .catch((error) => console.error("Error sending wait approve list:", error));
 
-  // =======================================
-
+  // 3. HH wait approve
   const notApproveHHLists = await getNotApproveHHLists(pool);
-
   if (notApproveHHLists.length > 0) {
     const waitApproveHh =
       "❤️ HH ที่รอการ Approve\n\n" +
       notApproveHHLists
-        .map((hh) => {
-          return `🙅‍♂️ <${hh.id}> ${hh.member} ${hh.hours}h ${
-            hh.description == null || hh.description == ""
-              ? ""
-              : `(${hh.description})`
-          }`;
-        })
+        .map(
+          (hh) =>
+            `🙅‍♂️ <${hh.id}> ${hh.member} ${hh.hours}h ${
+              hh.description ? `(${hh.description})` : ""
+            }`,
+        )
         .join("\n");
 
-    // Define the message you want to send
-    const message3 = {
-      type: "text",
-      text: waitApproveHh,
-    };
-
-    // Create the payload for the request
-    const payload3 = {
-      to: GROUP_ID,
-      messages: [message3],
-    };
-
-    // Send the message to the Line Group
     await axiosInstance
-      .post("", payload3)
-      .then((response) => {
-        console.log("Message sent successfully:", response.data);
+      .post("", {
+        to: GROUP_ID,
+        messages: [{ type: "text", text: waitApproveHh }],
       })
-      .catch((error) => {
-        console.error("Error sending message:", error);
-      });
+      .then((response) => console.log("HH wait approve sent:", response.data))
+      .catch((error) => console.error("Error sending HH wait approve:", error));
   }
 }
 
 export async function pushSingleMessage(message: string) {
-  const LINE_ACCESS_TOKEN = process.env.CHANNEL_ACCESS_TOKEN || "";
   const GROUP_ID = process.env.GROUP_ID || "";
+  const axiosInstance = createAxiosInstance();
 
-  // Line Messaging API endpoint
-  const LINE_API_URL = "https://api.line.me/v2/bot/message/push";
-
-  // Create an Axios instance with the Line API headers
-  const axiosInstance = axios.create({
-    baseURL: LINE_API_URL,
-    headers: {
-      Authorization: `Bearer ${LINE_ACCESS_TOKEN}`,
-      "Content-Type": "application/json",
-    },
-  });
-
-  // Define the message you want to send
-  const message1 = {
-    type: "text",
-    text: message,
-  };
-
-  // Create the payload for the request
-  const payload1 = {
-    to: GROUP_ID,
-    messages: [message1],
-  };
-
-  // Send the message to the Line Group
   axiosInstance
-    .post("", payload1)
-    .then((response) => {
-      console.log("Message sent successfully:", response.data);
-    })
-    .catch((error) => {
-      console.error("Error sending message:", error);
-    });
+    .post("", { to: GROUP_ID, messages: [{ type: "text", text: message }] })
+    .then((response) => console.log("Message sent:", response.data))
+    .catch((error) => console.error("Error sending message:", error));
 }

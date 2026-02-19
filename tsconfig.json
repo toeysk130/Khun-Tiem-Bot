@@ -8,6 +8,8 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
-  }
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node", "express", "body-parser", "pg", "node-cron"]
+  },
+  "exclude": ["node_modules", "dist", "src/__tests__"]
 }

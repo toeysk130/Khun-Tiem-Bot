@@ -1,21 +1,21 @@
-import { addNewHhLeaveRequest } from "../../API/leaveScheduleAPI";
 import { UserMetaData } from "../../types/interface";
 import { checkIfHhIdExist } from "../../repositories/happyHour";
 import { addHhRecord, updateHhApproveFlag } from "../../services/hhService";
-import { pushMsg } from "../../utils/sendLineMsg";
+import { addNewHhLeaveRequest } from "../../services/leaveService";
+import { replyMessage } from "../../utils/sendLineMsg";
 import { validateHhRequest } from "../../validations/validateHhReq";
-import { client, pool } from "../handleIncomingMessage";
+import { lineClient } from "../../configs/lineClient";
+import { pool } from "../../configs/database";
 
 export async function handleHhCommand(
   commandArr: string[],
-  userMetaData: UserMetaData
+  userMetaData: UserMetaData,
 ) {
-  // Validate the command format (hh <subcommand> <params>)
   if (commandArr.length < 2) {
-    return pushMsg(
-      client,
+    return replyMessage(
+      lineClient,
       userMetaData.replyToken,
-      `⚠️ การใช้คำสั่ง "hh" ไม่ถูกต้อง ตัวอย่าง: "hh เพิ่ม 1h เหตุผล" หรือ "hh ใช้ 2h เหตุผล"`
+      `⚠️ การใช้คำสั่ง "hh" ไม่ถูกต้อง ตัวอย่าง: "hh เพิ่ม 1h เหตุผล" หรือ "hh ใช้ 2h เหตุผล"`,
     );
   }
 
@@ -26,159 +26,149 @@ export async function handleHhCommand(
       await handleAddHhRecord(
         commandArr,
         userMetaData,
-        userMetaData.replyToken
+        userMetaData.replyToken,
       );
       break;
     case "ใช้":
       await handleUseHhRequest(
         commandArr,
         userMetaData,
-        userMetaData.replyToken
+        userMetaData.replyToken,
       );
       break;
     case "approve":
       await handleHhApproveRequest(
         commandArr,
         userMetaData,
-        userMetaData.replyToken
+        userMetaData.replyToken,
       );
       break;
     default:
-      await pushMsg(
-        client,
+      await replyMessage(
+        lineClient,
         userMetaData.replyToken,
-        `⛔ คำสั่ง "hh" ที่ไม่รู้จัก "${hhSubCommand}" ตัวเลือกที่สามารถใช้ได้: "เพิ่ม", "ใช้", "approve"`
+        `⛔ คำสั่ง "hh" ที่ไม่รู้จัก "${hhSubCommand}" ตัวเลือกที่สามารถใช้ได้: "เพิ่ม", "ใช้", "approve"`,
       );
       break;
   }
 }
 
-// Function to handle "hh เพิ่ม"
 async function handleAddHhRecord(
   commandArr: string[],
   userMetaData: UserMetaData,
-  replyToken: string
+  replyToken: string,
 ) {
   if (commandArr.length < 3) {
-    return pushMsg(
-      client,
+    return replyMessage(
+      lineClient,
       replyToken,
-      `⚠️ การใช้คำสั่ง "hh เพิ่ม" ไม่ถูกต้อง ตัวอย่าง: "hh เพิ่ม 1h เหตุผล"`
+      `⚠️ การใช้คำสั่ง "hh เพิ่ม" ไม่ถูกต้อง ตัวอย่าง: "hh เพิ่ม 1h เหตุผล"`,
     );
   }
 
   const hhAmt = parseInt(commandArr[2]);
   if (isNaN(hhAmt)) {
-    return pushMsg(
-      client,
+    return replyMessage(
+      lineClient,
       replyToken,
-      `⚠️ จำนวนชั่วโมงไม่ถูกต้อง กรุณาระบุจำนวนชั่วโมงที่ถูกต้อง`
+      `⚠️ จำนวนชั่วโมงไม่ถูกต้อง กรุณาระบุจำนวนชั่วโมงที่ถูกต้อง`,
     );
   }
 
-  const description = commandArr.slice(3).join(" "); // ใช้ส่วนที่เหลือเป็นคำอธิบาย
+  const description = commandArr.slice(3).join(" ");
 
   try {
     await addHhRecord(
       pool,
-      client,
+      lineClient,
       replyToken,
       userMetaData.username,
       "เพิ่ม",
       hhAmt,
-      description
+      description,
     );
   } catch (error) {
     console.error("Error adding HH record:", error);
-    await pushMsg(
-      client,
+    await replyMessage(
+      lineClient,
       replyToken,
-      `❌ เกิดข้อผิดพลาดขณะเพิ่มชั่วโมง Happy Hour กรุณาลองใหม่อีกครั้งภายหลัง`
+      `❌ เกิดข้อผิดพลาดขณะเพิ่มชั่วโมง Happy Hour กรุณาลองใหม่อีกครั้งภายหลัง`,
     );
   }
 }
 
-// Function to handle "hh ใช้"
 async function handleUseHhRequest(
   commandArr: string[],
   userMetaData: UserMetaData,
-  replyToken: string
+  replyToken: string,
 ) {
   const isValidRequest = await validateHhRequest(userMetaData, commandArr);
-  console.table(isValidRequest);
-  // BUG: Prevents reusing of reply token
-  if (!isValidRequest) {
-    return;
-  }
+  if (!isValidRequest) return;
 
   try {
-    await addNewHhLeaveRequest(
+    const msg = await addNewHhLeaveRequest(
       pool,
-      client,
-      replyToken,
       userMetaData.username,
-      commandArr
+      commandArr,
     );
+    await replyMessage(lineClient, replyToken, msg);
   } catch (error) {
     console.error("Error processing HH request:", error);
-    await pushMsg(
-      client,
+    await replyMessage(
+      lineClient,
       replyToken,
-      `❌ เกิดข้อผิดพลาดขณะใช้ชั่วโมง Happy Hour กรุณาลองใหม่อีกครั้งภายหลัง`
+      `❌ เกิดข้อผิดพลาดขณะใช้ชั่วโมง Happy Hour กรุณาลองใหม่อีกครั้งภายหลัง`,
     );
   }
 }
 
-// Function to handle "hh approve"
 async function handleHhApproveRequest(
   commandArr: string[],
   userMetaData: UserMetaData,
-  replyToken: string
+  replyToken: string,
 ) {
   if (!userMetaData.isAdmin) {
-    return pushMsg(
-      client,
+    return replyMessage(
+      lineClient,
       replyToken,
-      "😡 คุณไม่ใช่ Admin ไม่สามารถใช้งานได้!"
+      "😡 คุณไม่ใช่ Admin ไม่สามารถใช้งานได้!",
     );
   }
 
   if (commandArr.length < 3) {
-    return pushMsg(
-      client,
+    return replyMessage(
+      lineClient,
       replyToken,
-      `⚠️ การใช้คำสั่ง "hh approve" ไม่ถูกต้อง ตัวอย่าง: "hh approve 8" หรือ "hh approve 3,4,8"`
+      `⚠️ การใช้คำสั่ง "hh approve" ไม่ถูกต้อง ตัวอย่าง: "hh approve 8" หรือ "hh approve 3,4,8"`,
     );
   }
 
-  // Extract IDs and validate them
   const ids = commandArr[2].split(",").map((item) => Number(item.trim()));
 
   try {
     for (const id of ids) {
       const exists = await checkIfHhIdExist(pool, id.toString());
       if (!exists) {
-        return pushMsg(
-          client,
+        return replyMessage(
+          lineClient,
           replyToken,
-          `⛔ ไม่มี ID:${id} ในระบบ Happy Hour`
+          `⛔ ไม่มี ID:${id} ในระบบ Happy Hour`,
         );
       }
     }
 
-    // If all IDs are valid, approve them
-    await updateHhApproveFlag(pool, client, replyToken, ids);
-    await pushMsg(
-      client,
+    await updateHhApproveFlag(pool, lineClient, replyToken, ids);
+    await replyMessage(
+      lineClient,
       replyToken,
-      `✅ อนุมัติ Happy Hour สำเร็จสำหรับ ID: ${ids.join(", ")}`
+      `✅ อนุมัติ Happy Hour สำเร็จสำหรับ ID: ${ids.join(", ")}`,
     );
   } catch (error) {
     console.error("Error approving HH IDs:", error);
-    await pushMsg(
-      client,
+    await replyMessage(
+      lineClient,
       replyToken,
-      `❌ เกิดข้อผิดพลาดขณะอนุมัติ Happy Hour กรุณาลองใหม่อีกครั้งภายหลัง`
+      `❌ เกิดข้อผิดพลาดขณะอนุมัติ Happy Hour กรุณาลองใหม่อีกครั้งภายหลัง`,
     );
   }
 }
