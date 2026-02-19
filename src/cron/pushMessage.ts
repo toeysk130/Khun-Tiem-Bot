@@ -140,12 +140,12 @@ export async function pushReminderMessage() {
     .catch((error) => console.error("Error sending reminder:", error));
 }
 
-export async function pushSingleMessage(message: string) {
-  const GROUP_ID = process.env.GROUP_ID || "";
+export async function pushSingleMessage(message: string, to?: string) {
+  const targetId = to || process.env.GROUP_ID || "";
   const axiosInstance = createAxiosInstance();
 
   axiosInstance
-    .post("", { to: GROUP_ID, messages: [{ type: "text", text: message }] })
+    .post("", { to: targetId, messages: [{ type: "text", text: message }] })
     .then((response) => console.log("Message sent:", response.data))
     .catch((error) => console.error("Error sending message:", error));
 }

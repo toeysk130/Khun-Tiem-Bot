@@ -23,6 +23,7 @@ export async function handleLeaveRequest(
     if (userMetaData.chatType === "PERSONAL") {
       await pushSingleMessage(
         `🥰 Added new leave request for ${userMetaData.username} successfully`,
+        userMetaData.userId,
       );
     }
   } catch (error) {
@@ -49,6 +50,7 @@ export async function handleNcLeaveRequest(
     if (userMetaData.chatType === "PERSONAL") {
       await pushSingleMessage(
         `🥰 Added new leave request for ${userMetaData.username} successfully`,
+        userMetaData.userId,
       );
     }
   } catch (error) {

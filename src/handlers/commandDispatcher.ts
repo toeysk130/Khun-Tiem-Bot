@@ -107,6 +107,7 @@ export async function commandDispatcher(
     AI_POWERED_COMMANDS.includes(command) || QUIET_COMMANDS.includes(command);
 
   if (!skipAI) {
+    const targetId = userMetadata.groupId || userMetadata.userId;
     generateAIComment(
       userMetadata.username,
       commandArr.join(" "),
@@ -114,7 +115,7 @@ export async function commandDispatcher(
     )
       .then((comment) => {
         if (comment) {
-          pushSingleMessage(`🤖 ${comment}`);
+          pushSingleMessage(`🤖 ${comment}`, targetId);
         }
       })
       .catch(() => {
