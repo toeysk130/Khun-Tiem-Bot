@@ -5,7 +5,7 @@ import { addHhRecord, updateHhApproveFlag } from "../../services/hhService";
 import { addNewHhLeaveRequest } from "../../services/leaveService";
 import { enhanceErrorWithAI } from "../../services/openaiService";
 import { UserMetaData } from "../../types/interface";
-import { replyMessage } from "../../utils/sendLineMsg";
+import { replyFlexMessage, replyMessage } from "../../utils/sendLineMsg";
 import { validateHhRequest } from "../../validations/validateHhReq";
 
 export async function handleHhCommand(
@@ -105,12 +105,12 @@ async function handleUseHhRequest(
   if (!isValidRequest) return;
 
   try {
-    const msg = await addNewHhLeaveRequest(
+    const flexMsg = await addNewHhLeaveRequest(
       pool,
       userMetaData.username,
       commandArr,
     );
-    await replyMessage(lineClient, replyToken, msg);
+    await replyFlexMessage(lineClient, replyToken, flexMsg);
   } catch (error) {
     console.error("Error processing HH request:", error);
     await replyMessage(

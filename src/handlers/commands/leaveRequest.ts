@@ -1,13 +1,13 @@
+import { pool } from "../../configs/database";
+import { lineClient } from "../../configs/lineClient";
+import { pushSingleMessage } from "../../cron/pushMessage";
 import {
   addNewLeaveRequest,
   addNewNcLeaveRequest,
 } from "../../services/leaveService";
-import { pushSingleMessage } from "../../cron/pushMessage";
 import { UserMetaData } from "../../types/interface";
+import { replyFlexMessage, replyMessage } from "../../utils/sendLineMsg";
 import { validateLeaveRequest } from "../../validations/validateLeaveReq";
-import { replyMessage } from "../../utils/sendLineMsg";
-import { lineClient } from "../../configs/lineClient";
-import { pool } from "../../configs/database";
 
 export async function handleLeaveRequest(
   commandArr: string[],
@@ -17,8 +17,8 @@ export async function handleLeaveRequest(
   if (!isValidRequest) return;
 
   try {
-    const msg = await addNewLeaveRequest(pool, userMetaData, commandArr);
-    await replyMessage(lineClient, userMetaData.replyToken, msg);
+    const flexMsg = await addNewLeaveRequest(pool, userMetaData, commandArr);
+    await replyFlexMessage(lineClient, userMetaData.replyToken, flexMsg);
 
     if (userMetaData.chatType === "PERSONAL") {
       await pushSingleMessage(
@@ -43,8 +43,8 @@ export async function handleNcLeaveRequest(
   if (!isValidRequest) return;
 
   try {
-    const msg = await addNewNcLeaveRequest(pool, userMetaData, commandArr);
-    await replyMessage(lineClient, userMetaData.replyToken, msg);
+    const flexMsg = await addNewNcLeaveRequest(pool, userMetaData, commandArr);
+    await replyFlexMessage(lineClient, userMetaData.replyToken, flexMsg);
 
     if (userMetaData.chatType === "PERSONAL") {
       await pushSingleMessage(

@@ -1,9 +1,9 @@
-import { UserMetaData } from "../../types/interface";
-import { replyMessage } from "../../utils/sendLineMsg";
-import { lineClient } from "../../configs/lineClient";
 import { pool } from "../../configs/database";
+import { lineClient } from "../../configs/lineClient";
 import { checkIfIdExist } from "../../repositories/leaveScheduleRepository";
 import { approveLeaveRequests } from "../../services/leaveService";
+import { UserMetaData } from "../../types/interface";
+import { replyFlexMessage, replyMessage } from "../../utils/sendLineMsg";
 
 export async function handleApproveCommand(
   commandArr: string[],
@@ -51,8 +51,8 @@ export async function handleApproveCommand(
       }
     }
 
-    const msg = await approveLeaveRequests(pool, ids);
-    return replyMessage(lineClient, userMetaData.replyToken, msg);
+    const flexMsg = await approveLeaveRequests(pool, ids);
+    return replyFlexMessage(lineClient, userMetaData.replyToken, flexMsg);
   } catch (error) {
     console.error("Error approving IDs:", error);
     return replyMessage(

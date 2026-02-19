@@ -1,12 +1,13 @@
-import { Pool } from "pg";
-import { Client } from "@line/bot-sdk";
-import { replyMessage } from "../utils/sendLineMsg";
 import {
   getNotApprvHh,
   getRemainingHh,
   insertHhRecord,
   updateHhApproveFlagRepo,
 } from "../repositories/happyHour";
+import { buildResultBubble } from "../utils/flexMessage";
+import { replyFlexMessage, replyMessage } from "../utils/sendLineMsg";
+import { Client } from "@line/bot-sdk";
+import { Pool } from "pg";
 
 export async function addHhRecord(
   pool: Pool,
@@ -23,18 +24,19 @@ export async function addHhRecord(
     const notApprvHh = await getNotApprvHh(pool, member);
     const remaining = await getRemainingHh(pool, member);
 
-    await client.replyMessage(replyToken, {
-      type: "text",
-      text: `❤️ สร้าง Request hh สำหรับ ${member} สำเร็จ\
-      \n🙅‍♂️ ที่ยังไม่ Approve: ${notApprvHh} hours\
-      \n🙆‍♂️ ที่ Approve: ${remaining} hours`,
-    });
+    const flex = buildResultBubble("hh", `HH สำหรับ ${member}`, [
+      { label: "📝 ประเภท", value: `${type} ${hour}h` },
+      { label: "📋 เหตุผล", value: description || "-" },
+      { label: "🙅‍♂️ รอ Approve", value: `${notApprvHh}h`, color: "#F39C12" },
+      { label: "🙆‍♂️ Approved", value: `${remaining}h`, color: "#27AE60" },
+    ]);
+    await replyFlexMessage(client, replyToken, flex);
   } catch (error) {
     console.error("Error adding HH record:", error);
     await replyMessage(
       client,
       replyToken,
-      `😥 Failed to request new hh for '${member}'`,
+      "😥 เกิดข้อผิดพลาดขณะเพิ่ม Happy Hour กรุณาลองใหม่",
     );
   }
 }
@@ -47,13 +49,13 @@ export async function updateHhApproveFlag(
 ) {
   try {
     await updateHhApproveFlagRepo(pool, ids);
-    await replyMessage(
-      client,
-      replyToken,
-      `✅ Approve request IDs: ${ids.join(", ")} successfully`,
-    );
+    const flex = buildResultBubble("success", "อนุมัติ Happy Hour", [
+      { label: "🔢 IDs", value: ids.join(", ") },
+      { label: "📊 จำนวน", value: `${ids.length} รายการ` },
+    ]);
+    await replyFlexMessage(client, replyToken, flex);
   } catch (error) {
     console.error("Error updating HH approval status:", error);
-    await replyMessage(client, replyToken, `❌ Failed to approve HH records.`);
+    await replyMessage(client, replyToken, "❌ เกิดข้อผิดพลาดขณะอนุมัติ HH");
   }
 }

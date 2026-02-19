@@ -1,6 +1,14 @@
-import pg from "pg";
-import { ILeaveSchedule, UserMetaData } from "../types/interface";
 import { keywordMappings } from "../configs/constants";
+import { delHhRecord, getRemainingHh } from "../repositories/happyHour";
+import {
+  getLeaveById,
+  insertLeaveSchedule,
+  insertLeaveScheduleWithApproval,
+  updateApproveFlag as repoUpdateApproveFlag,
+  updateKeyStatus as repoUpdateKeyStatus,
+} from "../repositories/leaveScheduleRepository";
+import { ILeaveSchedule, UserMetaData } from "../types/interface";
+import { buildResultBubble } from "../utils/flexMessage";
 import {
   convertDatetimeToDDMMYY,
   getColorEmoji,
@@ -8,14 +16,8 @@ import {
   getDisplayLeaveDate,
   getFormatLeaveDate,
 } from "../utils/utils";
-import {
-  insertLeaveSchedule,
-  insertLeaveScheduleWithApproval,
-  getLeaveById,
-  updateKeyStatus as repoUpdateKeyStatus,
-  updateApproveFlag as repoUpdateApproveFlag,
-} from "../repositories/leaveScheduleRepository";
-import { delHhRecord, getRemainingHh } from "../repositories/happyHour";
+import { FlexMessage } from "@line/bot-sdk";
+import pg from "pg";
 
 // ── Leave Request ──
 
@@ -23,7 +25,7 @@ export async function addNewLeaveRequest(
   pool: pg.Pool,
   userMetaData: UserMetaData,
   commandArr: string[],
-): Promise<string> {
+): Promise<FlexMessage> {
   const [, leaveType, leaveStartDate, leaveAmount, leaveKey, ...descriptions] =
     commandArr;
   const description = descriptions.join(" ").trim();
@@ -51,14 +53,21 @@ export async function addNewLeaveRequest(
   ];
 
   await insertLeaveSchedule(pool, values);
-  return `🥰 Added new leave request for ${userMetaData.username} successfully`;
+  return buildResultBubble("success", `แจ้งลาสำเร็จ`, [
+    { label: "👤 ชื่อ", value: userMetaData.username },
+    { label: "📄 ประเภท", value: leaveType },
+    { label: "📅 วันที่", value: leaveStartDate.toUpperCase() },
+    { label: "⏰ จำนวน", value: leaveAmount },
+    { label: "🔑 Key", value: leaveKey },
+    ...(description ? [{ label: "📝 เหตุผล", value: description }] : []),
+  ]);
 }
 
 export async function addNewNcLeaveRequest(
   pool: pg.Pool,
   userMetaData: UserMetaData,
   commandArr: string[],
-): Promise<string> {
+): Promise<FlexMessage> {
   const leaveType = commandArr[1];
   const leaveStartDate = commandArr[2];
   const leaveAmount = commandArr[3];
@@ -84,14 +93,20 @@ export async function addNewNcLeaveRequest(
   ];
 
   await insertLeaveScheduleWithApproval(pool, values);
-  return `🥰 Added new leave request for ${userMetaData.username} successfully`;
+  return buildResultBubble("success", `แจ้งลาสำเร็จ (NC)`, [
+    { label: "👤 ชื่อ", value: userMetaData.username },
+    { label: "📄 ประเภท", value: leaveType },
+    { label: "📅 วันที่", value: leaveStartDate.toUpperCase() },
+    { label: "⏰ จำนวน", value: leaveAmount },
+    ...(description ? [{ label: "📝 เหตุผล", value: description }] : []),
+  ]);
 }
 
 export async function addNewHhLeaveRequest(
   pool: pg.Pool,
   username: string,
   commandArr: string[],
-): Promise<string> {
+): Promise<FlexMessage> {
   const hhAmt = commandArr[2];
   const leaveStartDate = commandArr[3];
   const leaveAmount = commandArr[4];
@@ -120,7 +135,12 @@ export async function addNewHhLeaveRequest(
   await delHhRecord(pool, username, parseInt(hhAmt), description);
 
   const remaining = await getRemainingHh(pool, username);
-  return `❤️‍🔥 ใช้ hh สำหรับ ${username} สำเร็จ คงเหลือ: ${remaining} hours`;
+  return buildResultBubble("hh", `ใช้ HH สำหรับ ${username}`, [
+    { label: "⏰ ใช้", value: `${hhAmt}h` },
+    { label: "📅 วันที่", value: leaveStartDate.toUpperCase() },
+    { label: "❤️ คงเหลือ", value: `${remaining}h`, color: "#27AE60" },
+    ...(description ? [{ label: "📝 เหตุผล", value: description }] : []),
+  ]);
 }
 
 // ── Update / Approve ──
@@ -129,33 +149,33 @@ export async function updateKeyStatusAndGetDetail(
   pool: pg.Pool,
   id: string,
   key: string,
-): Promise<string> {
+): Promise<FlexMessage> {
   await repoUpdateKeyStatus(pool, id, key);
 
   const leaveDetail = await getLeaveById(pool, id);
-  const medCerDetail =
-    leaveDetail.leave_type === "ลาป่วย" && leaveDetail.medical_cert
-      ? keywordMappings["cer"]
-      : "";
-  const leaveDetailText = `🚀 ข้อมูลล่าสุด: <${id}> ${leaveDetail.member} ${
-    leaveDetail.leave_type
-  } ${
+  const dateDisplay =
     leaveDetail.leave_start_dt === leaveDetail.leave_end_dt
       ? convertDatetimeToDDMMYY(leaveDetail.leave_start_dt)
-      : convertDatetimeToDDMMYY(leaveDetail.leave_start_dt) +
-        "-" +
-        convertDatetimeToDDMMYY(leaveDetail.leave_end_dt)
-  } ${leaveDetail.period_detail} ${leaveDetail.status} ${medCerDetail ?? null}`;
+      : `${convertDatetimeToDDMMYY(leaveDetail.leave_start_dt)}-${convertDatetimeToDDMMYY(leaveDetail.leave_end_dt)}`;
 
-  return `✅ Update ID:${id} to '${key} ${medCerDetail ?? null}'\n${leaveDetailText}`;
+  return buildResultBubble("info", `อัปเดต <${id}> สำเร็จ`, [
+    { label: "👤 ชื่อ", value: leaveDetail.member },
+    { label: "📄 ประเภท", value: leaveDetail.leave_type },
+    { label: "📅 วันที่", value: dateDisplay },
+    { label: "⏰ ช่วง", value: leaveDetail.period_detail },
+    { label: "🔑 สถานะ", value: key },
+  ]);
 }
 
 export async function approveLeaveRequests(
   pool: pg.Pool,
   ids: number[],
-): Promise<string> {
+): Promise<FlexMessage> {
   await repoUpdateApproveFlag(pool, ids);
-  return `✅ Approve request IDs: ${ids.join(", ")} successfully`;
+  return buildResultBubble("success", "อนุมัติวันลาสำเร็จ", [
+    { label: "🔢 IDs", value: ids.join(", ") },
+    { label: "📊 จำนวน", value: `${ids.length} รายการ` },
+  ]);
 }
 
 // ── Formatters (for message building) ──

@@ -12,7 +12,7 @@ import { getIsLeaveDuplicate } from "../repositories/leaveScheduleRepository";
 import { updateKeyStatusAndGetDetail } from "../services/leaveService";
 import { enhanceErrorWithAI } from "../services/openaiService";
 import { UserMetaData } from "../types/interface";
-import { replyMessage } from "../utils/sendLineMsg";
+import { replyFlexMessage, replyMessage } from "../utils/sendLineMsg";
 
 export async function validateInputDate(
   userMetaData: UserMetaData,
@@ -93,12 +93,12 @@ export async function validateInputDate(
 
     if (duplicateId > 0 && leaveType !== "hh") {
       // Found duplicate — auto-update the existing record's key status
-      const msg = await updateKeyStatusAndGetDetail(
+      const flexMsg = await updateKeyStatusAndGetDetail(
         pool,
         duplicateId,
         leaveKey,
       );
-      await replyMessage(lineClient, userMetaData.replyToken, msg);
+      await replyFlexMessage(lineClient, userMetaData.replyToken, flexMsg);
       return false;
     }
   }

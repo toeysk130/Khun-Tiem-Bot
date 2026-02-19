@@ -1,10 +1,10 @@
 import { validKeyStatus } from "../../configs/constants";
-import { UserMetaData } from "../../types/interface";
-import { replyMessage } from "../../utils/sendLineMsg";
-import { lineClient } from "../../configs/lineClient";
 import { pool } from "../../configs/database";
+import { lineClient } from "../../configs/lineClient";
 import { checkIfMyIdExist } from "../../repositories/leaveScheduleRepository";
 import { updateKeyStatusAndGetDetail } from "../../services/leaveService";
+import { UserMetaData } from "../../types/interface";
+import { replyFlexMessage, replyMessage } from "../../utils/sendLineMsg";
 
 export async function handleUpdateRequest(
   commandArr: string[],
@@ -41,8 +41,8 @@ export async function handleUpdateRequest(
   }
 
   try {
-    const msg = await updateKeyStatusAndGetDetail(pool, id, status);
-    await replyMessage(lineClient, userMetaData.replyToken, msg);
+    const flexMsg = await updateKeyStatusAndGetDetail(pool, id, status);
+    await replyFlexMessage(lineClient, userMetaData.replyToken, flexMsg);
   } catch (error) {
     console.error("Error updating request:", error);
     await replyMessage(

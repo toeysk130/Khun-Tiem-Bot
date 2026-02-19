@@ -1190,3 +1190,99 @@ function buildStatRow(label: string, value: string) {
     ],
   };
 }
+
+// ══════════════════════════════════════════════════════════
+// Generic Result Bubble (success / error / info)
+// ══════════════════════════════════════════════════════════
+
+type ResultType = "success" | "error" | "info" | "warning" | "hh";
+
+const RESULT_THEMES: Record<
+  ResultType,
+  { bg: string; icon: string; label: string }
+> = {
+  success: { bg: "#27AE60", icon: "✅", label: "สำเร็จ" },
+  error: { bg: "#E74C3C", icon: "❌", label: "ผิดพลาด" },
+  info: { bg: "#3498DB", icon: "ℹ️", label: "ข้อมูล" },
+  warning: { bg: "#F39C12", icon: "⚠️", label: "แจ้งเตือน" },
+  hh: { bg: "#E91E63", icon: "❤️", label: "Happy Hour" },
+};
+
+export function buildResultBubble(
+  type: ResultType,
+  title: string,
+  details: { label: string; value: string; color?: string }[],
+  altText?: string,
+): FlexMessage {
+  const theme = RESULT_THEMES[type];
+
+  const detailRows = details.map((d) => ({
+    type: "box" as const,
+    layout: "horizontal" as const,
+    margin: "sm" as const,
+    contents: [
+      {
+        type: "text" as const,
+        text: d.label,
+        size: "sm" as const,
+        color: COLORS.muted,
+        flex: 2,
+      },
+      {
+        type: "text" as const,
+        text: d.value,
+        size: "sm" as const,
+        color: d.color || COLORS.dark,
+        flex: 3,
+        align: "end" as const,
+        weight: "bold" as const,
+        wrap: true,
+      },
+    ],
+  }));
+
+  const bubble: FlexBubble = {
+    type: "bubble",
+    size: "kilo",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: `${theme.icon} ${title}`,
+          weight: "bold",
+          size: "md",
+          color: "#FFFFFF",
+          wrap: true,
+        },
+      ],
+      backgroundColor: theme.bg,
+      paddingAll: "12px",
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      contents:
+        detailRows.length > 0
+          ? detailRows
+          : [
+              {
+                type: "text" as const,
+                text: "เรียบร้อย",
+                size: "sm" as const,
+                color: COLORS.muted,
+                align: "center" as const,
+              },
+            ],
+      paddingAll: "12px",
+      spacing: "sm",
+    },
+  };
+
+  return {
+    type: "flex",
+    altText: altText || `${theme.icon} ${title}`,
+    contents: bubble,
+  };
+}

@@ -407,7 +407,8 @@ describe("Command Handlers", () => {
       expect(lineClient.replyMessage).toHaveBeenCalledWith(
         adminMetadata.replyToken,
         expect.objectContaining({
-          text: expect.stringContaining("Approve request IDs"),
+          type: "flex",
+          altText: expect.stringContaining("อนุมัติ"),
         }),
       );
     });

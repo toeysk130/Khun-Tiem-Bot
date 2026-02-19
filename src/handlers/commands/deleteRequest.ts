@@ -7,7 +7,10 @@ import {
   getLeaveById,
 } from "../../repositories/leaveScheduleRepository";
 import { UserMetaData } from "../../types/interface";
-import { buildDeleteConfirmBubble } from "../../utils/flexMessage";
+import {
+  buildDeleteConfirmBubble,
+  buildResultBubble,
+} from "../../utils/flexMessage";
 import { replyFlexMessage, replyMessage } from "../../utils/sendLineMsg";
 import { getDisplayLeaveDate } from "../../utils/utils";
 
@@ -77,12 +80,16 @@ export async function executeDelete(replyToken: string, id: string) {
     const detail = await getLeaveById(pool, id);
     await deleteLeaveById(pool, id);
 
-    const msg = `🗑️ ลบรายการ <${id}> สำเร็จ\n${detail.member} ${
-      detail.leave_type
-    } ${getDisplayLeaveDate(detail.leave_start_dt, detail.leave_end_dt)} ${
-      detail.period_detail
-    }`;
-    await replyMessage(lineClient, replyToken, msg);
+    const flex = buildResultBubble("success", `ลบรายการ <${id}> สำเร็จ`, [
+      { label: "👤 ชื่อ", value: detail.member },
+      { label: "📄 ประเภท", value: detail.leave_type },
+      {
+        label: "📅 วันที่",
+        value: getDisplayLeaveDate(detail.leave_start_dt, detail.leave_end_dt),
+      },
+      { label: "⏰ ช่วง", value: detail.period_detail },
+    ]);
+    await replyFlexMessage(lineClient, replyToken, flex);
   } catch (error) {
     console.error("Error executing delete:", error);
     await replyMessage(
