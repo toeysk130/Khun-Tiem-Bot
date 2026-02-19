@@ -3,6 +3,7 @@ import { UserMetaData } from "../types/interface";
 import { replyMessage } from "../utils/sendLineMsg";
 import { handleApproveCommand } from "./commands/approveRequest";
 import { handleAskAICommand } from "./commands/askAICommand";
+import { handleDeleteMemberCommand } from "./commands/deleteMember";
 import { handleDeleteRequest } from "./commands/deleteRequest";
 import { handleHhCommand } from "./commands/hhCommands";
 import {
@@ -73,6 +74,9 @@ export async function commandDispatcher(
     case "ขุนเทียม":
     case "ฝากด่า":
       await handleAskAICommand(commandArr, userMetadata);
+      break;
+    case "ลบสมาชิก":
+      await handleDeleteMemberCommand(commandArr, userMetadata);
       break;
     default:
       await replyMessage(

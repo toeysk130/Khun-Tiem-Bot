@@ -46,10 +46,10 @@ export async function handleShowTableCommand(
       ]);
       const members = rows as IMember[];
 
-      // Build HH remaining map
+      // Build HH remaining map — parseFloat to avoid string concatenation
       const hhMap: { [key: string]: number } = {};
       allHh.forEach((h) => {
-        hhMap[h.member] = h.remaining || 0;
+        hhMap[h.member] = parseFloat(String(h.remaining)) || 0;
       });
 
       const memberData = members.map((m) => ({
@@ -58,6 +58,12 @@ export async function handleShowTableCommand(
         hhRemaining: hhMap[m.name] || 0,
         hhPending: pendingMap[m.name] || 0,
       }));
+
+      // Sort: non-admins by HH desc first, then admins at bottom
+      memberData.sort((a, b) => {
+        if (a.isAdmin !== b.isAdmin) return a.isAdmin ? 1 : -1;
+        return b.hhRemaining - a.hhRemaining;
+      });
 
       const flexMsg = buildMemberListBubble(memberData);
       await replyFlexMessage(lineClient, replyToken, flexMsg);

@@ -971,7 +971,7 @@ export function buildMemberListBubble(
     contents: [
       {
         type: "text" as const,
-        text: `${m.name}${m.isAdmin ? " 👑" : ""}`,
+        text: `${m.name}${m.isAdmin ? " (admin)" : ""}`,
         size: "sm" as const,
         color: COLORS.dark,
         flex: 3,

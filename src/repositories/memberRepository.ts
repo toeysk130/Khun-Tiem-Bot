@@ -1,5 +1,5 @@
-import pg from "pg";
 import { IMember } from "../types/interface";
+import pg from "pg";
 
 export async function getMemberByUid(
   pool: pg.Pool,
@@ -17,4 +17,12 @@ export async function insertMember(
 ): Promise<void> {
   const query = `INSERT INTO member (uid, name) VALUES ($1, $2);`;
   await pool.query(query, [userId, userName]);
+}
+
+export async function deleteMemberByName(
+  pool: pg.Pool,
+  name: string,
+): Promise<boolean> {
+  const result = await pool.query(`DELETE FROM member WHERE name = $1`, [name]);
+  return (result.rowCount ?? 0) > 0;
 }

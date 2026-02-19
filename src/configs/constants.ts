@@ -22,6 +22,7 @@ export const validBotCommands = [
   "ฝากด่า",
   "cron",
   "ขุนเทียม",
+  "ลบสมาชิก",
   "คำสั่ง",
 ];
 
