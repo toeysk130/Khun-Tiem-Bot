@@ -1,0 +1,756 @@
+import { keywordMappings } from "../configs/constants";
+import { ILeaveSchedule } from "../types/interface";
+import { convertDatetimeToDDMMYY, getDisplayLeaveDate } from "./utils";
+import { FlexBubble, FlexCarousel, FlexMessage } from "@line/bot-sdk";
+
+// ── Color Palette ──
+const COLORS = {
+  primary: "#4A90D9",
+  success: "#27AE60",
+  warning: "#F39C12",
+  danger: "#E74C3C",
+  info: "#3498DB",
+  muted: "#95A5A6",
+  dark: "#2C3E50",
+  light: "#ECF0F1",
+  hh: "#E91E63",
+  bg: "#F8F9FA",
+};
+
+function statusColor(isApprove: boolean, status: string): string {
+  if (isApprove) return COLORS.success;
+  if (status === "key") return COLORS.warning;
+  return COLORS.danger;
+}
+
+function statusEmoji(isApprove: boolean, status: string): string {
+  if (isApprove) return "🟢";
+  if (status === "key") return "🟡";
+  return "🔴";
+}
+
+function statusText(isApprove: boolean, status: string): string {
+  if (isApprove) return "Approved";
+  if (status === "key") return "Keyed";
+  return "Not Keyed";
+}
+
+// ── Flex Bubble Builders ──
+
+export function buildLeaveSuccessBubble(
+  member: string,
+  leaveType: string,
+  dateDisplay: string,
+  periodDetail: string,
+  description: string,
+): FlexMessage {
+  const bubble: FlexBubble = {
+    type: "bubble",
+    size: "kilo",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: "✅ แจ้งลาสำเร็จ",
+          weight: "bold",
+          size: "md",
+          color: "#FFFFFF",
+        },
+      ],
+      backgroundColor: COLORS.success,
+      paddingAll: "15px",
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: member,
+          weight: "bold",
+          size: "lg",
+          color: COLORS.dark,
+        },
+        { type: "separator", margin: "md" },
+        {
+          type: "box",
+          layout: "vertical",
+          margin: "md",
+          spacing: "sm",
+          contents: [
+            buildInfoRow("📋 ประเภท", leaveType),
+            buildInfoRow("📅 วันที่", dateDisplay),
+            buildInfoRow("⏱️ จำนวน", periodDetail),
+            ...(description ? [buildInfoRow("💬 เหตุผล", description)] : []),
+          ],
+        },
+      ],
+      paddingAll: "15px",
+    },
+  };
+
+  return {
+    type: "flex",
+    altText: `✅ แจ้งลาสำเร็จ — ${member}`,
+    contents: bubble,
+  };
+}
+
+export function buildTodayReportBubble(leaves: ILeaveSchedule[]): FlexMessage {
+  const leaveRows = leaves.map((l) => ({
+    type: "box" as const,
+    layout: "horizontal" as const,
+    spacing: "sm" as const,
+    margin: "md" as const,
+    contents: [
+      {
+        type: "text" as const,
+        text: `${statusEmoji(l.is_approve, l.status)}`,
+        size: "sm" as const,
+        flex: 0,
+      },
+      {
+        type: "text" as const,
+        text: `${l.member}`,
+        size: "sm" as const,
+        weight: "bold" as const,
+        flex: 3,
+        color: COLORS.dark,
+      },
+      {
+        type: "text" as const,
+        text: `${l.leave_type} ${l.period_detail}`,
+        size: "xs" as const,
+        flex: 4,
+        color: COLORS.muted,
+        align: "end" as const,
+      },
+    ],
+  }));
+
+  const bubble: FlexBubble = {
+    type: "bubble",
+    size: "mega",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: `📋 คนที่ลาวันนี้ (${leaves.length} คน)`,
+          weight: "bold",
+          size: "md",
+          color: "#FFFFFF",
+        },
+      ],
+      backgroundColor: COLORS.primary,
+      paddingAll: "15px",
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            {
+              type: "text",
+              text: "🟢 Approved",
+              size: "xxs",
+              color: COLORS.success,
+              flex: 1,
+            },
+            {
+              type: "text",
+              text: "🟡 Keyed",
+              size: "xxs",
+              color: COLORS.warning,
+              flex: 1,
+            },
+            {
+              type: "text",
+              text: "🔴 Pending",
+              size: "xxs",
+              color: COLORS.danger,
+              flex: 1,
+            },
+          ],
+          margin: "none",
+        },
+        { type: "separator", margin: "md" },
+        ...(leaveRows.length > 0
+          ? leaveRows
+          : [
+              {
+                type: "text" as const,
+                text: "ไม่มีใครลาวันนี้ 🎉",
+                size: "sm" as const,
+                color: COLORS.muted,
+                margin: "md" as const,
+                align: "center" as const,
+              },
+            ]),
+      ],
+      paddingAll: "15px",
+    },
+  };
+
+  return {
+    type: "flex",
+    altText: `📋 คนที่ลาวันนี้ ${leaves.length} คน`,
+    contents: bubble,
+  };
+}
+
+export function buildWeeklyReportBubble(
+  title: string,
+  dayRows: { day: string; date: string; members: string[] }[],
+): FlexMessage {
+  const dayColors = ["#E74C3C", "#E67E22", "#F1C40F", "#27AE60", "#3498DB"];
+
+  const rows = dayRows.map((row, i) => ({
+    type: "box" as const,
+    layout: "horizontal" as const,
+    spacing: "sm" as const,
+    margin: "md" as const,
+    contents: [
+      {
+        type: "box" as const,
+        layout: "vertical" as const,
+        contents: [
+          {
+            type: "text" as const,
+            text: row.day,
+            size: "xs" as const,
+            weight: "bold" as const,
+            color: "#FFFFFF",
+            align: "center" as const,
+          },
+          {
+            type: "text" as const,
+            text: row.date.split("-").pop() || "",
+            size: "xxs" as const,
+            color: "#FFFFFF",
+            align: "center" as const,
+          },
+        ],
+        backgroundColor: dayColors[i],
+        cornerRadius: "md",
+        paddingAll: "5px",
+        width: "45px",
+        justifyContent: "center" as const,
+      },
+      {
+        type: "text" as const,
+        text: row.members.length > 0 ? row.members.join(", ") : "—",
+        size: "xs" as const,
+        flex: 5,
+        wrap: true,
+        color: row.members.length > 0 ? COLORS.dark : COLORS.muted,
+        gravity: "center" as const,
+      },
+    ],
+  }));
+
+  const bubble: FlexBubble = {
+    type: "bubble",
+    size: "mega",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: `😶‍🌫️ ${title}`,
+          weight: "bold",
+          size: "md",
+          color: "#FFFFFF",
+        },
+      ],
+      backgroundColor: COLORS.info,
+      paddingAll: "15px",
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      contents: rows,
+      paddingAll: "15px",
+    },
+  };
+
+  return { type: "flex", altText: title, contents: bubble };
+}
+
+export function buildMonthlyCarousel(
+  monthTitle: string,
+  memberData: { member: string; leaves: ILeaveSchedule[]; totalDays: number }[],
+): FlexMessage {
+  const bubbles: FlexBubble[] = memberData.map((data) => ({
+    type: "bubble",
+    size: "kilo",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: `👤 ${data.member}`,
+          weight: "bold",
+          size: "md",
+          color: "#FFFFFF",
+        },
+        {
+          type: "text",
+          text: `รวม ${data.totalDays} วัน`,
+          size: "xs",
+          color: "#FFFFFFCC",
+        },
+      ],
+      backgroundColor: COLORS.primary,
+      paddingAll: "12px",
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      contents: data.leaves.map((l) => ({
+        type: "box" as const,
+        layout: "horizontal" as const,
+        spacing: "sm" as const,
+        margin: "sm" as const,
+        contents: [
+          {
+            type: "text" as const,
+            text: statusEmoji(l.is_approve, l.status),
+            size: "sm" as const,
+            flex: 0,
+          },
+          {
+            type: "text" as const,
+            text: `${l.leave_type}`,
+            size: "xs" as const,
+            flex: 2,
+            color: COLORS.dark,
+          },
+          {
+            type: "text" as const,
+            text: getDisplayLeaveDate(l.leave_start_dt, l.leave_end_dt),
+            size: "xxs" as const,
+            flex: 3,
+            color: COLORS.muted,
+            align: "end" as const,
+          },
+        ],
+      })),
+      paddingAll: "12px",
+      spacing: "sm",
+    },
+  }));
+
+  const carousel: FlexCarousel = {
+    type: "carousel",
+    contents: bubbles.slice(0, 10), // LINE limit: 10 bubbles
+  };
+
+  return {
+    type: "flex",
+    altText: `📊 ${monthTitle}`,
+    contents: carousel,
+  };
+}
+
+export function buildSummaryBubble(
+  member: string,
+  summaryRows: { type: string; days: number; count: number }[],
+  totalDays: number,
+): FlexMessage {
+  const rows = summaryRows.map((row) => ({
+    type: "box" as const,
+    layout: "horizontal" as const,
+    margin: "md" as const,
+    contents: [
+      {
+        type: "text" as const,
+        text: `📋 ${row.type}`,
+        size: "sm" as const,
+        flex: 3,
+        color: COLORS.dark,
+      },
+      {
+        type: "text" as const,
+        text: `${row.days} วัน`,
+        size: "sm" as const,
+        flex: 2,
+        align: "end" as const,
+        color: COLORS.primary,
+        weight: "bold" as const,
+      },
+      {
+        type: "text" as const,
+        text: `(${row.count} ครั้ง)`,
+        size: "xs" as const,
+        flex: 2,
+        align: "end" as const,
+        color: COLORS.muted,
+      },
+    ],
+  }));
+
+  const bubble: FlexBubble = {
+    type: "bubble",
+    size: "kilo",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: `📈 สรุปวันลา`,
+          weight: "bold",
+          size: "md",
+          color: "#FFFFFF",
+        },
+        { type: "text", text: member, size: "sm", color: "#FFFFFFCC" },
+      ],
+      backgroundColor: COLORS.info,
+      paddingAll: "12px",
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        ...rows,
+        { type: "separator", margin: "lg" },
+        {
+          type: "box",
+          layout: "horizontal",
+          margin: "md",
+          contents: [
+            {
+              type: "text",
+              text: "📊 รวมทั้งหมด",
+              size: "sm",
+              flex: 3,
+              weight: "bold",
+              color: COLORS.dark,
+            },
+            {
+              type: "text",
+              text: `${totalDays} วัน`,
+              size: "md",
+              flex: 2,
+              align: "end",
+              weight: "bold",
+              color: COLORS.success,
+            },
+          ],
+        },
+      ],
+      paddingAll: "12px",
+    },
+  };
+
+  return {
+    type: "flex",
+    altText: `📈 สรุปวันลาของ ${member}: ${totalDays} วัน`,
+    contents: bubble,
+  };
+}
+
+export function buildTeamSummaryCarousel(
+  memberSummaries: {
+    member: string;
+    types: { type: string; days: number }[];
+    totalDays: number;
+    hhRemaining: number;
+  }[],
+): FlexMessage {
+  const bubbles: FlexBubble[] = memberSummaries.map((data) => ({
+    type: "bubble",
+    size: "kilo",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: `👤 ${data.member}`,
+          weight: "bold",
+          size: "md",
+          color: "#FFFFFF",
+        },
+        {
+          type: "box",
+          layout: "horizontal",
+          margin: "sm",
+          contents: [
+            {
+              type: "text",
+              text: `📊 ${data.totalDays} วัน`,
+              size: "xs",
+              color: "#FFFFFFCC",
+              flex: 1,
+            },
+            {
+              type: "text",
+              text: `❤️ HH: ${data.hhRemaining}h`,
+              size: "xs",
+              color: "#FFFFFFCC",
+              flex: 1,
+              align: "end",
+            },
+          ],
+        },
+      ],
+      backgroundColor: COLORS.primary,
+      paddingAll: "12px",
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      contents: data.types.map((t) => ({
+        type: "box" as const,
+        layout: "horizontal" as const,
+        margin: "sm" as const,
+        contents: [
+          {
+            type: "text" as const,
+            text: `📋 ${t.type}`,
+            size: "sm" as const,
+            flex: 3,
+            color: COLORS.dark,
+          },
+          {
+            type: "text" as const,
+            text: `${t.days} วัน`,
+            size: "sm" as const,
+            flex: 1,
+            align: "end" as const,
+            weight: "bold" as const,
+            color: COLORS.primary,
+          },
+        ],
+      })),
+      paddingAll: "12px",
+    },
+  }));
+
+  return {
+    type: "flex",
+    altText: `📈 สรุปวันลาทั้งทีม`,
+    contents: { type: "carousel", contents: bubbles.slice(0, 10) },
+  };
+}
+
+export function buildDeleteConfirmBubble(
+  id: string,
+  member: string,
+  leaveType: string,
+  dateDisplay: string,
+  periodDetail: string,
+): FlexMessage {
+  const bubble: FlexBubble = {
+    type: "bubble",
+    size: "kilo",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: "⚠️ ยืนยันการลบ",
+          weight: "bold",
+          size: "md",
+          color: "#FFFFFF",
+        },
+      ],
+      backgroundColor: COLORS.warning,
+      paddingAll: "12px",
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        { type: "text", text: `ID: ${id}`, size: "xs", color: COLORS.muted },
+        {
+          type: "text",
+          text: member,
+          size: "md",
+          weight: "bold",
+          color: COLORS.dark,
+          margin: "sm",
+        },
+        buildInfoRow("📋", leaveType),
+        buildInfoRow("📅", dateDisplay),
+        buildInfoRow("⏱️", periodDetail),
+      ],
+      paddingAll: "12px",
+    },
+    footer: {
+      type: "box",
+      layout: "horizontal",
+      spacing: "sm",
+      contents: [
+        {
+          type: "button",
+          style: "primary",
+          color: COLORS.danger,
+          action: {
+            type: "postback",
+            label: "🗑️ ลบเลย",
+            data: `action=delete&id=${id}`,
+            displayText: `ยืนยันลบ ID:${id}`,
+          },
+        },
+        {
+          type: "button",
+          style: "secondary",
+          action: {
+            type: "postback",
+            label: "❌ ยกเลิก",
+            data: `action=cancel_delete&id=${id}`,
+            displayText: "ยกเลิกการลบ",
+          },
+        },
+      ],
+      paddingAll: "12px",
+    },
+  };
+
+  return {
+    type: "flex",
+    altText: `⚠️ ยืนยันลบ ID:${id} - ${member} ${leaveType}`,
+    contents: bubble,
+  };
+}
+
+export function buildFunStatsBubble(stats: {
+  totalLeaves: number;
+  totalMembers: number;
+  topLeaver: { name: string; days: number } | null;
+  mostPopularType: { type: string; count: number } | null;
+  busiestDay: { day: string; count: number } | null;
+  avgLeavesPerPerson: number;
+}): FlexMessage {
+  const rows: any[] = [
+    buildStatRow("👥 จำนวนสมาชิก", `${stats.totalMembers} คน`),
+    buildStatRow("📝 รายการลาทั้งหมด", `${stats.totalLeaves} ครั้ง`),
+    buildStatRow("📊 เฉลี่ยต่อคน", `${stats.avgLeavesPerPerson} วัน`),
+  ];
+
+  if (stats.topLeaver) {
+    rows.push(
+      buildStatRow(
+        "🏆 คนลามากสุด",
+        `${stats.topLeaver.name} (${stats.topLeaver.days} วัน)`,
+      ),
+    );
+  }
+  if (stats.mostPopularType) {
+    rows.push(
+      buildStatRow(
+        "📋 ประเภทยอดฮิต",
+        `${stats.mostPopularType.type} (${stats.mostPopularType.count} ครั้ง)`,
+      ),
+    );
+  }
+  if (stats.busiestDay) {
+    rows.push(
+      buildStatRow(
+        "📅 วันลายอดฮิต",
+        `${stats.busiestDay.day} (${stats.busiestDay.count} คน)`,
+      ),
+    );
+  }
+
+  const bubble: FlexBubble = {
+    type: "bubble",
+    size: "kilo",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: "🏆 สถิติทีม",
+          weight: "bold",
+          size: "lg",
+          color: "#FFFFFF",
+        },
+        {
+          type: "text",
+          text: "ข้อมูลสนุกๆ ของทีมเรา",
+          size: "xs",
+          color: "#FFFFFFCC",
+        },
+      ],
+      backgroundColor: "#8E44AD",
+      paddingAll: "15px",
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      contents: rows,
+      paddingAll: "15px",
+      spacing: "md",
+    },
+  };
+
+  return { type: "flex", altText: "🏆 สถิติสนุกๆ ของทีม", contents: bubble };
+}
+
+// ── Helper builders ──
+
+function buildInfoRow(label: string, value: string) {
+  return {
+    type: "box" as const,
+    layout: "horizontal" as const,
+    margin: "sm" as const,
+    contents: [
+      {
+        type: "text" as const,
+        text: label,
+        size: "sm" as const,
+        color: COLORS.muted,
+        flex: 2,
+      },
+      {
+        type: "text" as const,
+        text: value,
+        size: "sm" as const,
+        color: COLORS.dark,
+        flex: 4,
+        wrap: true,
+      },
+    ],
+  };
+}
+
+function buildStatRow(label: string, value: string) {
+  return {
+    type: "box" as const,
+    layout: "horizontal" as const,
+    contents: [
+      {
+        type: "text" as const,
+        text: label,
+        size: "sm" as const,
+        color: COLORS.dark,
+        flex: 3,
+        wrap: true,
+      },
+      {
+        type: "text" as const,
+        text: value,
+        size: "sm" as const,
+        color: COLORS.primary,
+        flex: 3,
+        align: "end" as const,
+        weight: "bold" as const,
+        wrap: true,
+      },
+    ],
+  };
+}

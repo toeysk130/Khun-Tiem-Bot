@@ -1,12 +1,16 @@
-import { UserMetaData } from "../../types/interface";
-import { replyMessage } from "../../utils/sendLineMsg";
-import { lineClient } from "../../configs/lineClient";
 import { pool } from "../../configs/database";
+import { lineClient } from "../../configs/lineClient";
+import { getAllRemainingHh } from "../../repositories/happyHour";
 import {
   getAllMembersSummary,
   getLeaveSummaryByMember,
 } from "../../repositories/leaveScheduleRepository";
-import { getAllRemainingHh } from "../../repositories/happyHour";
+import { UserMetaData } from "../../types/interface";
+import {
+  buildSummaryBubble,
+  buildTeamSummaryCarousel,
+} from "../../utils/flexMessage";
+import { replyFlexMessage, replyMessage } from "../../utils/sendLineMsg";
 
 export async function handleSummaryCommand(
   commandArr: string[],
@@ -14,10 +18,8 @@ export async function handleSummaryCommand(
 ) {
   try {
     if (commandArr.length === 1) {
-      // "สรุป" alone → show summary for current user
       await showMySummary(userMetaData);
     } else if (commandArr[1] === "ทั้งหมด" && userMetaData.isAdmin) {
-      // "สรุป ทั้งหมด" (admin only) → show all members summary
       await showAllSummary(userMetaData);
     } else {
       await replyMessage(
@@ -48,18 +50,20 @@ async function showMySummary(userMetaData: UserMetaData) {
     return;
   }
 
-  let msg = `📈 สรุปวันลาของ ${userMetaData.username}\n___________\n`;
+  const summaryRows = summary.map((row: any) => ({
+    type: row.leave_type,
+    days: parseFloat(row.total_days) || 0,
+    count: parseInt(row.total_requests) || 0,
+  }));
 
-  let totalDays = 0;
-  summary.forEach((row: any) => {
-    const days = parseFloat(row.total_days) || 0;
-    totalDays += days;
-    msg += `📋 ${row.leave_type}: ${days} วัน (${row.total_requests} ครั้ง)\n`;
-  });
+  const totalDays = summaryRows.reduce((sum, r) => sum + r.days, 0);
 
-  msg += `___________\n📊 รวมทั้งหมด: ${totalDays} วัน`;
-
-  await replyMessage(lineClient, userMetaData.replyToken, msg);
+  const flexMsg = buildSummaryBubble(
+    userMetaData.username,
+    summaryRows,
+    totalDays,
+  );
+  await replyFlexMessage(lineClient, userMetaData.replyToken, flexMsg);
 }
 
 async function showAllSummary(userMetaData: UserMetaData) {
@@ -78,9 +82,7 @@ async function showAllSummary(userMetaData: UserMetaData) {
   }
 
   // Group by member
-  const memberMap: {
-    [key: string]: { type: string; days: number; count: number }[];
-  } = {};
+  const memberMap: { [key: string]: { type: string; days: number }[] } = {};
   allSummary.forEach((row: any) => {
     if (!memberMap[row.member]) {
       memberMap[row.member] = [];
@@ -88,7 +90,6 @@ async function showAllSummary(userMetaData: UserMetaData) {
     memberMap[row.member].push({
       type: row.leave_type,
       days: parseFloat(row.total_days) || 0,
-      count: parseInt(row.total_requests) || 0,
     });
   });
 
@@ -98,16 +99,13 @@ async function showAllSummary(userMetaData: UserMetaData) {
     hhMap[hh.member] = hh.remaining;
   });
 
-  let msg = `📈 สรุปวันลาทั้งทีม\n___________\n`;
+  const memberSummaries = Object.entries(memberMap).map(([member, types]) => ({
+    member,
+    types,
+    totalDays: types.reduce((sum, t) => sum + t.days, 0),
+    hhRemaining: hhMap[member] ?? 0,
+  }));
 
-  for (const [member, types] of Object.entries(memberMap)) {
-    const totalDays = types.reduce((sum, t) => sum + t.days, 0);
-    const hhRemaining = hhMap[member] ?? 0;
-    msg += `\n👤 ${member} (รวม ${totalDays} วัน, HH: ${hhRemaining}h)\n`;
-    types.forEach((t) => {
-      msg += `  📋 ${t.type}: ${t.days} วัน\n`;
-    });
-  }
-
-  await replyMessage(lineClient, userMetaData.replyToken, msg);
+  const flexMsg = buildTeamSummaryCarousel(memberSummaries);
+  await replyFlexMessage(lineClient, userMetaData.replyToken, flexMsg);
 }

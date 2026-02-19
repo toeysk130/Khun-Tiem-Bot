@@ -1,13 +1,14 @@
-import { UserMetaData } from "../../types/interface";
-import { replyMessage } from "../../utils/sendLineMsg";
-import { lineClient } from "../../configs/lineClient";
 import { pool } from "../../configs/database";
+import { lineClient } from "../../configs/lineClient";
 import {
-  checkIfMyIdExist,
   checkIfIdExist,
+  checkIfMyIdExist,
   deleteLeaveById,
   getLeaveById,
 } from "../../repositories/leaveScheduleRepository";
+import { UserMetaData } from "../../types/interface";
+import { buildDeleteConfirmBubble } from "../../utils/flexMessage";
+import { replyFlexMessage, replyMessage } from "../../utils/sendLineMsg";
 import { getDisplayLeaveDate } from "../../utils/utils";
 
 export async function handleDeleteRequest(
@@ -46,7 +47,33 @@ export async function handleDeleteRequest(
   }
 
   try {
-    // Get leave details before deleting for confirmation message
+    // Show confirm dialog instead of deleting immediately
+    const detail = await getLeaveById(pool, id);
+    const dateDisplay = getDisplayLeaveDate(
+      detail.leave_start_dt,
+      detail.leave_end_dt,
+    );
+    const confirmFlex = buildDeleteConfirmBubble(
+      id,
+      detail.member,
+      detail.leave_type,
+      dateDisplay,
+      detail.period_detail,
+    );
+    await replyFlexMessage(lineClient, userMetaData.replyToken, confirmFlex);
+  } catch (error) {
+    console.error("Error in delete request:", error);
+    await replyMessage(
+      lineClient,
+      userMetaData.replyToken,
+      `❌ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง`,
+    );
+  }
+}
+
+// Called from postback handler when user confirms deletion
+export async function executeDelete(replyToken: string, id: string) {
+  try {
     const detail = await getLeaveById(pool, id);
     await deleteLeaveById(pool, id);
 
@@ -55,12 +82,12 @@ export async function handleDeleteRequest(
     } ${getDisplayLeaveDate(detail.leave_start_dt, detail.leave_end_dt)} ${
       detail.period_detail
     }`;
-    await replyMessage(lineClient, userMetaData.replyToken, msg);
+    await replyMessage(lineClient, replyToken, msg);
   } catch (error) {
-    console.error("Error deleting leave request:", error);
+    console.error("Error executing delete:", error);
     await replyMessage(
       lineClient,
-      userMetaData.replyToken,
+      replyToken,
       `❌ เกิดข้อผิดพลาดขณะลบรายการ กรุณาลองใหม่อีกครั้ง`,
     );
   }

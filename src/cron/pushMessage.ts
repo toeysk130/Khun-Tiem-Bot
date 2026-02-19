@@ -1,10 +1,13 @@
-import * as dotenv from "dotenv";
-import axios from "axios";
 import { pool } from "../configs/database";
-import { getNotApproveHHLists } from "../repositories/happyHour";
 import { buildWeeklyReport } from "../handlers/commands/reportRequest";
-import { getAllWaitingApproval } from "../repositories/leaveScheduleRepository";
+import { getNotApproveHHLists } from "../repositories/happyHour";
+import {
+  getAllWaitingApproval,
+  getLeavesToday,
+} from "../repositories/leaveScheduleRepository";
 import { getColorEmoji, getDisplayLeaveDate } from "../utils/utils";
+import axios from "axios";
+import * as dotenv from "dotenv";
 
 dotenv.config();
 
@@ -81,6 +84,31 @@ export async function pushWeeklyMessage() {
       .then((response) => console.log("HH wait approve sent:", response.data))
       .catch((error) => console.error("Error sending HH wait approve:", error));
   }
+}
+
+export async function pushReminderMessage() {
+  const GROUP_ID = process.env.GROUP_ID || "";
+  const axiosInstance = createAxiosInstance();
+
+  // Calculate tomorrow's date
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split("T")[0];
+
+  const leavesTomorrow = await getLeavesToday(pool, tomorrowStr);
+
+  if (leavesTomorrow.length === 0) return; // No notification needed
+
+  const memberList = leavesTomorrow
+    .map((l) => `  • ${l.member} — ${l.leave_type} ${l.period_detail}`)
+    .join("\n");
+
+  const msg = `🔔 เตือน! พรุ่งนี้มีคนลา ${leavesTomorrow.length} คน\n\n${memberList}`;
+
+  await axiosInstance
+    .post("", { to: GROUP_ID, messages: [{ type: "text", text: msg }] })
+    .then((response) => console.log("Reminder sent:", response.data))
+    .catch((error) => console.error("Error sending reminder:", error));
 }
 
 export async function pushSingleMessage(message: string) {

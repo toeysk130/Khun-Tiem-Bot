@@ -1,23 +1,24 @@
-import { handleRegisterCommand } from "./commands/registerMember";
+import { lineClient } from "../configs/lineClient";
+import { UserMetaData } from "../types/interface";
+import { replyMessage } from "../utils/sendLineMsg";
+import { handleApproveCommand } from "./commands/approveRequest";
+import { handleDeleteRequest } from "./commands/deleteRequest";
+import { handleHhCommand } from "./commands/hhCommands";
 import {
   handleLeaveRequest,
   handleNcLeaveRequest,
 } from "./commands/leaveRequest";
-import { handleShowCommands } from "./commands/showCommands";
-import { handleShowTableCommand } from "./commands/showTable";
-import { handleApproveCommand } from "./commands/approveRequest";
+import { handleRegisterCommand } from "./commands/registerMember";
 import {
   handleOtherReport,
   handleReportCommand,
   handleWarningReport,
 } from "./commands/reportRequest";
-import { handleHhCommand } from "./commands/hhCommands";
-import { UserMetaData } from "../types/interface";
-import { handleUpdateRequest } from "./commands/updateRequests";
-import { handleDeleteRequest } from "./commands/deleteRequest";
+import { handleShowCommands } from "./commands/showCommands";
+import { handleShowTableCommand } from "./commands/showTable";
+import { handleStatsCommand } from "./commands/statsCommand";
 import { handleSummaryCommand } from "./commands/summaryCommand";
-import { replyMessage } from "../utils/sendLineMsg";
-import { lineClient } from "../configs/lineClient";
+import { handleUpdateRequest } from "./commands/updateRequests";
 
 export async function commandDispatcher(
   userMetadata: UserMetaData,
@@ -64,6 +65,9 @@ export async function commandDispatcher(
       break;
     case "สรุป":
       await handleSummaryCommand(commandArr, userMetadata);
+      break;
+    case "สถิติ":
+      await handleStatsCommand(commandArr, userMetadata);
       break;
     default:
       await replyMessage(

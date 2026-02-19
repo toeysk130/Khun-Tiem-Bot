@@ -1,32 +1,38 @@
-import { replyMessage } from "../../utils/sendLineMsg";
-import { lineClient } from "../../configs/lineClient";
-import { pool } from "../../configs/database";
-import {
-  getLeavesToday,
-  getLeaveScheduleByMember,
-  getLeavesByDateRange,
-  getWaitingApproval,
-  getLeavesByMonth,
-} from "../../repositories/leaveScheduleRepository";
-import { getNotApprovedHh } from "../../repositories/leaveScheduleRepository";
-import { getNotApproveHHLists } from "../../repositories/happyHour";
-import {
-  getCurrentDateString,
-  getCurrentWeekDate,
-  getNextWeektDateString,
-  getColorEmoji,
-  getDisplayLeaveDate,
-} from "../../utils/utils";
-import { UserMetaData, ILeaveSchedule } from "../../types/interface";
 import {
   daysColor,
-  validUpcaseMonths,
   keywordMappings,
+  validUpcaseMonths,
 } from "../../configs/constants";
+import { pool } from "../../configs/database";
+import { lineClient } from "../../configs/lineClient";
+import { getNotApproveHHLists } from "../../repositories/happyHour";
+import {
+  getLeaveScheduleByMember,
+  getLeavesByDateRange,
+  getLeavesByMonth,
+  getLeavesToday,
+  getWaitingApproval,
+} from "../../repositories/leaveScheduleRepository";
+import { getNotApprovedHh } from "../../repositories/leaveScheduleRepository";
 import {
   formatLeaveDetail,
   formatLeaveDetailWithKey,
 } from "../../services/leaveService";
+import { ILeaveSchedule, UserMetaData } from "../../types/interface";
+import {
+  buildMonthlyCarousel,
+  buildSummaryBubble,
+  buildTodayReportBubble,
+  buildWeeklyReportBubble,
+} from "../../utils/flexMessage";
+import { replyFlexMessage, replyMessage } from "../../utils/sendLineMsg";
+import {
+  getColorEmoji,
+  getCurrentDateString,
+  getCurrentWeekDate,
+  getDisplayLeaveDate,
+  getNextWeektDateString,
+} from "../../utils/utils";
 
 export async function handleReportCommand(
   commandArr: string[],
@@ -117,24 +123,8 @@ export async function handleWarningReport(userMetaData: UserMetaData) {
 async function handleTodayReport(replyToken: string) {
   try {
     const leaveDetails = await getLeavesToday(pool, getCurrentDateString());
-    const msg =
-      "✏️ คนที่ลาวันนี้\n___________\n" +
-      "🟢 approve แล้ว\n🟡 key & no approve\n🔴 ยังไม่ approve\n___________\n" +
-      leaveDetails
-        .map(
-          (detail) =>
-            `${getColorEmoji(detail.is_approve, detail.status)}<${
-              detail.id
-            }> ${detail.member} ${detail.leave_type} ${getDisplayLeaveDate(
-              detail.leave_start_dt,
-              detail.leave_end_dt,
-            )} ${detail.period_detail} ${detail.status} ${
-              detail.description ? `(${detail.description})` : ""
-            }`,
-        )
-        .join("\n");
-
-    await replyMessage(lineClient, replyToken, msg);
+    const flexMsg = buildTodayReportBubble(leaveDetails);
+    await replyFlexMessage(lineClient, replyToken, flexMsg);
   } catch (error) {
     console.error("Error fetching today's report:", error);
     await replyMessage(
@@ -160,11 +150,8 @@ async function handleMyReport(userMetaData: UserMetaData, replyToken: string) {
 
 async function handleWeeklyReport(replyToken: string, reportType: string) {
   try {
-    await replyMessage(
-      lineClient,
-      replyToken,
-      await buildWeeklyReport(reportType),
-    );
+    const { flexMsg } = await buildWeeklyReportData(reportType);
+    await replyFlexMessage(lineClient, replyToken, flexMsg);
   } catch (error) {
     console.error(`Error fetching ${reportType} report:`, error);
     await replyMessage(
@@ -187,12 +174,13 @@ async function handleMonthlyReport(replyToken: string) {
 
     const leaveDetails = await getLeavesByMonth(pool, monthStart, monthEnd);
     const monthName = validUpcaseMonths[month];
+    const monthTitle = `สรุปเดือน ${monthName} ${year}`;
 
     if (leaveDetails.length === 0) {
       await replyMessage(
         lineClient,
         replyToken,
-        `📊 สรุปเดือน ${monthName} ${year}\n\nไม่มีรายการลาในเดือนนี้`,
+        `📊 ${monthTitle}\n\nไม่มีรายการลาในเดือนนี้`,
       );
       return;
     }
@@ -206,23 +194,14 @@ async function handleMonthlyReport(replyToken: string) {
       memberMap[detail.member].push(detail);
     });
 
-    let msg = `📊 สรุปเดือน ${monthName} ${year}\n___________\n`;
-    msg += `📋 รวมทั้งหมด ${leaveDetails.length} รายการ\n___________\n\n`;
+    const memberData = Object.entries(memberMap).map(([member, leaves]) => ({
+      member,
+      leaves,
+      totalDays: leaves.reduce((sum, l) => sum + l.leave_period, 0),
+    }));
 
-    for (const [member, leaves] of Object.entries(memberMap)) {
-      const totalDays = leaves.reduce((sum, l) => sum + l.leave_period, 0);
-      msg += `👤 ${member} (${totalDays} วัน)\n`;
-      leaves.forEach((detail) => {
-        msg += `  ${getColorEmoji(detail.is_approve, detail.status)} ${
-          detail.leave_type
-        } ${getDisplayLeaveDate(detail.leave_start_dt, detail.leave_end_dt)} ${
-          detail.period_detail
-        }\n`;
-      });
-      msg += "\n";
-    }
-
-    await replyMessage(lineClient, replyToken, msg);
+    const flexMsg = buildMonthlyCarousel(monthTitle, memberData);
+    await replyFlexMessage(lineClient, replyToken, flexMsg);
   } catch (error) {
     console.error("Error fetching monthly report:", error);
     await replyMessage(
@@ -266,7 +245,9 @@ async function showMyList(member: string, replyToken: string) {
   await replyMessage(lineClient, replyToken, msg);
 }
 
-export async function buildWeeklyReport(reportType: string) {
+// ── Exported for cron/pushMessage ──
+
+export async function buildWeeklyReportData(reportType: string) {
   const currentWeekDates =
     reportType === "วีคนี้"
       ? getCurrentWeekDate(new Date(getCurrentDateString()))
@@ -281,24 +262,11 @@ export async function buildWeeklyReport(reportType: string) {
     currentWeekEndDate,
   );
 
-  let dayMembersMap: { [key: string]: string[] } = {};
+  const title =
+    reportType === "วีคนี้" ? "ใครลาบ้าง สัปดาห์นี้" : "ใครลาบ้าง สัปดาห์หน้า";
 
-  function formatDate(date: string): string {
-    const parts = date.split("-");
-    const day = parts[2];
-    const monthIndex = parseInt(parts[1], 10) - 1;
-    const month = validUpcaseMonths[monthIndex];
-    return `${day}${month}`;
-  }
-
-  let resultString = `😶‍🌫️ ใครลาบ้าง ${
-    reportType === "วีคนี้" ? "สัปดาห์นี้" : "สัปดาห์หน้า"
-  }\n\n`;
-
-  currentWeekDates.forEach((weekDate, index) => {
-    dayMembersMap[weekDate.day] = [];
-    const formattedDate = formatDate(weekDate.date);
-
+  const dayRows = currentWeekDates.map((weekDate) => {
+    const members: string[] = [];
     leaveListThisWeeks.forEach((leave) => {
       if (
         weekDate.date >= leave.leave_start_dt &&
@@ -309,14 +277,29 @@ export async function buildWeeklyReport(reportType: string) {
             ? `-${leave.period_detail}`
             : ``
         })`;
-        dayMembersMap[weekDate.day].push(leaveStr);
+        members.push(leaveStr);
       }
     });
 
-    resultString += `${daysColor[index]}${formattedDate}(${weekDate.day}) : ${
-      dayMembersMap[weekDate.day].join(", ") || ""
+    return { day: weekDate.day, date: weekDate.date, members };
+  });
+
+  const flexMsg = buildWeeklyReportBubble(title, dayRows);
+
+  // Also build text version for push messages
+  let textMsg = `😶‍🌫️ ${title}\n\n`;
+  dayRows.forEach((row, index) => {
+    const formattedDate = row.date.split("-").slice(1).join("");
+    textMsg += `${daysColor[index]}${formattedDate}(${row.day}) : ${
+      row.members.join(", ") || ""
     }\n`;
   });
 
-  return resultString;
+  return { flexMsg, textMsg };
+}
+
+// Keep backward compat for pushMessage.ts
+export async function buildWeeklyReport(reportType: string) {
+  const { textMsg } = await buildWeeklyReportData(reportType);
+  return textMsg;
 }

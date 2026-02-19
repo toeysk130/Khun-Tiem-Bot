@@ -18,28 +18,28 @@ jest.mock("../configs/lineClient", () => ({
   },
 }));
 
+import {
+  LeaveAmountMap,
+  monthAbbreviations,
+  ncTypes,
+  validBotCommands,
+  validHhTypes,
+  validKeyStatus,
+  validLeaveAmounts,
+  validLeaveTypes,
+  validhhAmts,
+} from "../configs/constants";
 // ── Imports ──
 import { CommandQueue } from "../queue/commandQueue";
 import {
   convertDatetimeToDDMMYY,
-  getCurrentDateString,
-  getCurrentWeekDate,
-  getCurrentTimestamp,
-  getFormatLeaveDate,
   getColorEmoji,
+  getCurrentDateString,
+  getCurrentTimestamp,
+  getCurrentWeekDate,
   getDisplayLeaveDate,
+  getFormatLeaveDate,
 } from "../utils/utils";
-import {
-  validBotCommands,
-  validLeaveTypes,
-  validKeyStatus,
-  validhhAmts,
-  validHhTypes,
-  validLeaveAmounts,
-  LeaveAmountMap,
-  ncTypes,
-  monthAbbreviations,
-} from "../configs/constants";
 
 // ══════════════════════════════════════════════════════════
 // CommandQueue Tests
@@ -231,6 +231,7 @@ describe("Constants", () => {
       "แอบดู",
       "สมัคร",
       "สรุป",
+      "สถิติ",
       "คำสั่ง",
     ];
 
@@ -528,7 +529,7 @@ describe("Command Handlers", () => {
       );
     });
 
-    it("should allow admin to delete any record", async () => {
+    it("should show confirm dialog for admin delete", async () => {
       const {
         handleDeleteRequest,
       } = require("../handlers/commands/deleteRequest");
@@ -548,14 +549,15 @@ describe("Command Handlers", () => {
               status: "key",
             },
           ],
-        })
-        .mockResolvedValueOnce({ rowCount: 1 }); // deleteLeaveById
+        });
 
       await handleDeleteRequest(["ลบ", "1"], adminMetadata);
+      // Now sends Flex confirm dialog instead of directly deleting
       expect(lineClient.replyMessage).toHaveBeenCalledWith(
         adminMetadata.replyToken,
         expect.objectContaining({
-          text: expect.stringContaining("ลบรายการ"),
+          type: "flex",
+          altText: expect.stringContaining("ยืนยันลบ"),
         }),
       );
     });
@@ -623,24 +625,26 @@ describe("Command Handlers", () => {
       );
     });
 
-    it("should handle today report", async () => {
+    it("should handle today report with Flex Message", async () => {
       const {
         handleReportCommand,
       } = require("../handlers/commands/reportRequest");
       pool.query.mockResolvedValueOnce({ rows: [] });
 
       await handleReportCommand(["รายงาน", "วันนี้"], mockUserMetadata);
+      // Now sends Flex Message instead of plain text
       expect(lineClient.replyMessage).toHaveBeenCalledWith(
         mockUserMetadata.replyToken,
         expect.objectContaining({
-          text: expect.stringContaining("คนที่ลาวันนี้"),
+          type: "flex",
+          altText: expect.stringContaining("คนที่ลาวันนี้"),
         }),
       );
     });
   });
 
   describe("handleSummaryCommand", () => {
-    it("should show personal summary when no args", async () => {
+    it("should show personal summary as Flex Message", async () => {
       const {
         handleSummaryCommand,
       } = require("../handlers/commands/summaryCommand");
@@ -654,7 +658,8 @@ describe("Command Handlers", () => {
       expect(lineClient.replyMessage).toHaveBeenCalledWith(
         mockUserMetadata.replyToken,
         expect.objectContaining({
-          text: expect.stringContaining("สรุปวันลาของ testuser"),
+          type: "flex",
+          altText: expect.stringContaining("สรุปวันลาของ testuser"),
         }),
       );
     });
@@ -672,6 +677,46 @@ describe("Command Handlers", () => {
           text: expect.stringContaining("ยังไม่มีรายการวันลา"),
         }),
       );
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════
+  // New Feature Tests
+  // ══════════════════════════════════════════════════════════
+
+  describe("handleStatsCommand", () => {
+    it("should return Flex Message with team stats", async () => {
+      const {
+        handleStatsCommand,
+      } = require("../handlers/commands/statsCommand");
+      pool.query
+        .mockResolvedValueOnce({ rows: [{ total: "10" }] }) // totalLeaves
+        .mockResolvedValueOnce({ rows: [{ total: "3" }] }) // totalMembers
+        .mockResolvedValueOnce({ rows: [{ member: "Alice", total_days: "5" }] }) // topLeaver
+        .mockResolvedValueOnce({
+          rows: [{ leave_type: "ลาพักร้อน", cnt: "6" }],
+        }) // popularType
+        .mockResolvedValueOnce({ rows: [{ day_name: "Monday", cnt: "4" }] }); // busiestDay
+
+      await handleStatsCommand(["สถิติ"], mockUserMetadata);
+      expect(lineClient.replyMessage).toHaveBeenCalledWith(
+        mockUserMetadata.replyToken,
+        expect.objectContaining({
+          type: "flex",
+          altText: expect.stringContaining("สถิติ"),
+        }),
+      );
+    });
+  });
+
+  describe("handleShowCommands (updated)", () => {
+    it("should include สถิติ in help text", async () => {
+      const {
+        handleShowCommands,
+      } = require("../handlers/commands/showCommands");
+      await handleShowCommands("test-token");
+      const callArgs = lineClient.replyMessage.mock.calls[0][1];
+      expect(callArgs.text).toContain("สถิติ");
     });
   });
 });

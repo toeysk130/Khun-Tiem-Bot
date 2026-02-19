@@ -18,6 +18,7 @@ export const validBotCommands = [
   "แอบดู",
   "สมัคร",
   "สรุป",
+  "สถิติ",
   "ฝากด่า",
   "cron",
   "ขุนเทียม",
