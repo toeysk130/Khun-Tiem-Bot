@@ -1,6 +1,6 @@
-import { Pool } from "pg";
-import { getCurrentTimestamp } from "../utils/utils";
 import { IAllRemaiHH, IHappyHour } from "../types/interface";
+import { getCurrentTimestamp } from "../utils/utils";
+import { Pool } from "pg";
 
 // Add new happy hour record
 export async function insertHhRecord(
@@ -8,7 +8,7 @@ export async function insertHhRecord(
   member: string,
   type: string,
   hour: number,
-  description: string
+  description: string,
 ) {
   const query = `
     INSERT INTO happy_hour (datetime, member, type, hours, description, is_approve)
@@ -31,7 +31,7 @@ export async function delHhRecord(
   pool: Pool,
   member: string,
   hour: number,
-  description: string
+  description: string,
 ) {
   const query = `
     INSERT INTO happy_hour (datetime, member, type, hours, description, is_approve)
@@ -83,6 +83,7 @@ export async function getAllRemainingHh(pool: Pool) {
       SUM(CASE WHEN type = 'เพิ่ม' THEN hours ELSE 0 END) -
       SUM(CASE WHEN type = 'ใช้' THEN hours ELSE 0 END) AS remaining
     FROM happy_hour
+    WHERE is_approve = true
     GROUP BY member
     ORDER BY remaining DESC
   `;
@@ -90,10 +91,26 @@ export async function getAllRemainingHh(pool: Pool) {
   return rows as IAllRemaiHH[];
 }
 
+// Get all pending (unapproved) happy hours per member
+export async function getAllPendingHh(pool: Pool) {
+  const query = `
+    SELECT member, SUM(hours) AS pending
+    FROM happy_hour
+    WHERE is_approve = false AND type = 'เพิ่ม'
+    GROUP BY member
+  `;
+  const { rows } = await pool.query(query);
+  const map: { [key: string]: number } = {};
+  rows.forEach((r: any) => {
+    map[r.member] = parseFloat(r.pending) || 0;
+  });
+  return map;
+}
+
 // Check if a happy hour ID exists
 export async function checkIfHhIdExist(
   pool: Pool,
-  id: string
+  id: string,
 ): Promise<boolean> {
   const query = `SELECT COUNT(1) as total FROM happy_hour WHERE id = $1`;
   const { rows } = await pool.query(query, [id]);
@@ -122,7 +139,7 @@ export async function getNotApproveHHLists(pool: Pool): Promise<IHappyHour[]> {
 // Get a user's not approved happy hour requests
 export async function getMyNotApproveHHLists(
   pool: Pool,
-  member: string
+  member: string,
 ): Promise<IHappyHour[]> {
   const query = `
     SELECT * FROM happy_hour WHERE is_approve = false AND member = $1 ORDER BY datetime

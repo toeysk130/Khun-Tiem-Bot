@@ -209,7 +209,7 @@ export function buildWeeklyReportBubble(
   title: string,
   dayRows: { day: string; date: string; members: string[] }[],
 ): FlexMessage {
-  const dayColors = ["#E74C3C", "#E67E22", "#F1C40F", "#27AE60", "#3498DB"];
+  const dayColors = ["#F1C40F", "#E91E63", "#27AE60", "#E67E22", "#3498DB"];
 
   const rows = dayRows.map((row, i) => ({
     type: "box" as const,
@@ -915,6 +915,164 @@ export function buildPersonalReportBubble(
   return {
     type: "flex",
     altText: `📋 รายการของ ${member} (${yearLabel})`,
+    contents: bubble,
+  };
+}
+
+export function buildMemberListBubble(
+  members: {
+    name: string;
+    isAdmin: boolean;
+    hhRemaining: number;
+    hhPending: number;
+  }[],
+): FlexMessage {
+  // Header row
+  const headerRow = {
+    type: "box" as const,
+    layout: "horizontal" as const,
+    spacing: "sm" as const,
+    margin: "none" as const,
+    contents: [
+      {
+        type: "text" as const,
+        text: "ชื่อ",
+        size: "xxs" as const,
+        color: COLORS.muted,
+        flex: 3,
+        weight: "bold" as const,
+      },
+      {
+        type: "text" as const,
+        text: "HH เหลือ",
+        size: "xxs" as const,
+        color: COLORS.muted,
+        flex: 2,
+        align: "center" as const,
+        weight: "bold" as const,
+      },
+      {
+        type: "text" as const,
+        text: "รอ approve",
+        size: "xxs" as const,
+        color: COLORS.muted,
+        flex: 2,
+        align: "center" as const,
+        weight: "bold" as const,
+      },
+    ],
+  };
+
+  const memberRows = members.map((m) => ({
+    type: "box" as const,
+    layout: "horizontal" as const,
+    spacing: "sm" as const,
+    margin: "sm" as const,
+    contents: [
+      {
+        type: "text" as const,
+        text: `${m.name}${m.isAdmin ? " 👑" : ""}`,
+        size: "sm" as const,
+        color: COLORS.dark,
+        flex: 3,
+      },
+      {
+        type: "text" as const,
+        text: `${m.hhRemaining}h`,
+        size: "sm" as const,
+        color: m.hhRemaining > 0 ? COLORS.success : COLORS.muted,
+        flex: 2,
+        align: "center" as const,
+        weight: "bold" as const,
+      },
+      {
+        type: "text" as const,
+        text: m.hhPending > 0 ? `${m.hhPending}h` : "-",
+        size: "sm" as const,
+        color: m.hhPending > 0 ? COLORS.warning : COLORS.muted,
+        flex: 2,
+        align: "center" as const,
+      },
+    ],
+  }));
+
+  const totalHH = members.reduce((s, m) => s + m.hhRemaining, 0);
+  const totalPending = members.reduce((s, m) => s + m.hhPending, 0);
+
+  const bubble: FlexBubble = {
+    type: "bubble",
+    size: "mega",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: "👥 สมาชิกในทีม",
+          weight: "bold",
+          size: "md",
+          color: "#FFFFFF",
+        },
+        {
+          type: "text",
+          text: `${members.length} คน`,
+          size: "xs",
+          color: "#FFFFFFCC",
+        },
+      ],
+      backgroundColor: "#2C3E50",
+      paddingAll: "12px",
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        headerRow,
+        { type: "separator" as const, margin: "sm" as const },
+        ...memberRows,
+        { type: "separator" as const, margin: "md" as const },
+        {
+          type: "box" as const,
+          layout: "horizontal" as const,
+          spacing: "sm" as const,
+          margin: "md" as const,
+          contents: [
+            {
+              type: "text" as const,
+              text: "📊 รวม",
+              size: "xs" as const,
+              color: COLORS.dark,
+              flex: 3,
+              weight: "bold" as const,
+            },
+            {
+              type: "text" as const,
+              text: `${totalHH}h`,
+              size: "xs" as const,
+              color: COLORS.success,
+              flex: 2,
+              align: "center" as const,
+              weight: "bold" as const,
+            },
+            {
+              type: "text" as const,
+              text: totalPending > 0 ? `${totalPending}h` : "-",
+              size: "xs" as const,
+              color: COLORS.warning,
+              flex: 2,
+              align: "center" as const,
+              weight: "bold" as const,
+            },
+          ],
+        },
+      ],
+      paddingAll: "12px",
+    },
+  };
+
+  return {
+    type: "flex",
+    altText: `👥 สมาชิกในทีม ${members.length} คน`,
     contents: bubble,
   };
 }

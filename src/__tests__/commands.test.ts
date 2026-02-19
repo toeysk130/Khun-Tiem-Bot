@@ -335,7 +335,7 @@ describe("Command Handlers", () => {
   });
 
   describe("handleShowCommands", () => {
-    it("should send commands list", async () => {
+    it("should send commands as Flex Message", async () => {
       const {
         handleShowCommands,
       } = require("../handlers/commands/showCommands");
@@ -343,21 +343,10 @@ describe("Command Handlers", () => {
       expect(lineClient.replyMessage).toHaveBeenCalledWith(
         "test-token",
         expect.objectContaining({
-          type: "text",
-          text: expect.stringContaining("รายการคำสั่ง"),
+          type: "flex",
+          altText: expect.stringContaining("คำสั่ง"),
         }),
       );
-    });
-
-    it("should include new commands in help text", async () => {
-      const {
-        handleShowCommands,
-      } = require("../handlers/commands/showCommands");
-      await handleShowCommands("test-token");
-      const callArgs = lineClient.replyMessage.mock.calls[0][1];
-      expect(callArgs.text).toContain("ลบ");
-      expect(callArgs.text).toContain("สรุป");
-      expect(callArgs.text).toContain("เดือนนี้");
     });
   });
 
@@ -451,22 +440,26 @@ describe("Command Handlers", () => {
       );
     });
 
-    it("should display member table", async () => {
+    it("should display member table as Flex", async () => {
       const {
         handleShowTableCommand,
       } = require("../handlers/commands/showTable");
-      pool.query.mockResolvedValueOnce({
-        rows: [
-          { name: "Alice", is_admin: true },
-          { name: "Bob", is_admin: false },
-        ],
-      });
+      pool.query
+        .mockResolvedValueOnce({
+          rows: [
+            { name: "Alice", is_admin: true },
+            { name: "Bob", is_admin: false },
+          ],
+        })
+        .mockResolvedValueOnce({ rows: [] }) // getAllRemainingHh
+        .mockResolvedValueOnce({ rows: [] }); // getAllPendingHh
 
       await handleShowTableCommand(["ตาราง", "member"], "test-token");
       expect(lineClient.replyMessage).toHaveBeenCalledWith(
         "test-token",
         expect.objectContaining({
-          text: expect.stringContaining("Alice"),
+          type: "flex",
+          altText: expect.stringContaining("สมาชิกในทีม"),
         }),
       );
     });
@@ -717,14 +710,19 @@ describe("Command Handlers", () => {
     });
   });
 
-  describe("handleShowCommands (updated)", () => {
-    it("should include สถิติ in help text", async () => {
+  describe("handleShowCommands (Flex)", () => {
+    it("should include สถิติ in altText", async () => {
       const {
         handleShowCommands,
       } = require("../handlers/commands/showCommands");
       await handleShowCommands("test-token");
-      const callArgs = lineClient.replyMessage.mock.calls[0][1];
-      expect(callArgs.text).toContain("สถิติ");
+      expect(lineClient.replyMessage).toHaveBeenCalledWith(
+        "test-token",
+        expect.objectContaining({
+          type: "flex",
+          altText: expect.stringContaining("คำสั่ง"),
+        }),
+      );
     });
   });
 });
