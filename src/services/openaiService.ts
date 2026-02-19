@@ -143,3 +143,25 @@ export async function enhanceErrorWithAI(
   }
   return errorMessage;
 }
+
+export async function generateAIComment(
+  username: string,
+  userCommand: string,
+  wasSuccessful: boolean,
+): Promise<string | null> {
+  const systemPrompt = `${BOT_CONTEXT}
+คุณเป็นผู้ช่วยที่คอยดูการใช้งานคำสั่ง แล้วแสดงความเห็นสั้นๆ
+กฎ:
+- ตอบ 1 ประโยค สั้นมากๆ ไม่เกิน 2 บรรทัด
+- ใส่ emoji ให้เหมาะสม
+- ถ้าคำสั่งสำเร็จ: แซว ชม หรือพูดตลกเกี่ยวกับสิ่งที่ผู้ใช้ทำ (ห้ามซ้ำกับข้อความตอบกลับ)
+- ถ้าคำสั่งผิดพลาด: ให้คำแนะนำสั้นๆ ว่าควรพิมพ์แบบไหน
+- เรียกชื่อผู้ใช้เป็นระยะ ทำให้เป็นกันเอง
+- ห้ามพูดซ้ำข้อมูลที่ Bot ตอบไปแล้ว`;
+
+  const context = wasSuccessful
+    ? `ผู้ใช้ "${username}" พิมพ์: "${userCommand}" → ทำงานสำเร็จ ช่วยแสดงความเห็นสั้นๆ`
+    : `ผู้ใช้ "${username}" พิมพ์: "${userCommand}" → เกิดข้อผิดพลาด ช่วยแนะนำสั้นๆ`;
+
+  return callOpenAI(systemPrompt, context, 80);
+}
