@@ -1,17 +1,18 @@
-import { getIsLeaveDuplicate } from "../repositories/leaveScheduleRepository";
-import { updateKeyStatusAndGetDetail } from "../services/leaveService";
 import {
   LONG_LEAVE_DATE_LEN,
-  monthAbbreviations,
   SINGLE_LEAVE_DATE_LEN,
+  monthAbbreviations,
   validKeyStatus,
   validLeaveAmounts,
   validUpcaseMonths,
 } from "../configs/constants";
-import { replyMessage } from "../utils/sendLineMsg";
-import { lineClient } from "../configs/lineClient";
 import { pool } from "../configs/database";
+import { lineClient } from "../configs/lineClient";
+import { getIsLeaveDuplicate } from "../repositories/leaveScheduleRepository";
+import { updateKeyStatusAndGetDetail } from "../services/leaveService";
+import { enhanceErrorWithAI } from "../services/openaiService";
 import { UserMetaData } from "../types/interface";
+import { replyMessage } from "../utils/sendLineMsg";
 
 export async function validateInputDate(
   userMetaData: UserMetaData,
@@ -49,22 +50,24 @@ export async function validateInputDate(
     leaveDatePeriod.length != SINGLE_LEAVE_DATE_LEN &&
     leaveDatePeriod.length != LONG_LEAVE_DATE_LEN
   ) {
-    await replyMessage(
-      lineClient,
-      userMetaData.replyToken,
-      `⚠️ ช่วงวันลา '${leaveDatePeriod.toUpperCase()}' ไม่ถูกต้อง (ตัวอย่าง 01JAN24 หรือ 01JAN24-03JAN24)`,
+    const baseError = `⚠️ ช่วงวันลา '${leaveDatePeriod.toUpperCase()}' ไม่ถูกต้อง (ตัวอย่าง 01JAN24 หรือ 01JAN24-03JAN24)`;
+    const enhanced = await enhanceErrorWithAI(
+      `${leaveType} ${leaveDatePeriod} ${leaveAmount}`,
+      baseError,
     );
+    await replyMessage(lineClient, userMetaData.replyToken, enhanced);
     return false;
   }
 
   // Validate single date format (e.g., "01JAN24")
   if (leaveDatePeriod.length === SINGLE_LEAVE_DATE_LEN) {
     if (!isValidMonth(leaveDatePeriod)) {
-      await replyMessage(
-        lineClient,
-        userMetaData.replyToken,
-        generateInvalidMonthMessage(leaveDatePeriod),
+      const baseError = generateInvalidMonthMessage(leaveDatePeriod);
+      const enhanced = await enhanceErrorWithAI(
+        `${leaveType} ${leaveDatePeriod} ${leaveAmount}`,
+        baseError,
       );
+      await replyMessage(lineClient, userMetaData.replyToken, enhanced);
       return false;
     }
 

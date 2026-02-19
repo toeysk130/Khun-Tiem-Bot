@@ -1,22 +1,21 @@
-import { UserMetaData } from "../../types/interface";
+import { pool } from "../../configs/database";
+import { lineClient } from "../../configs/lineClient";
 import { checkIfHhIdExist } from "../../repositories/happyHour";
 import { addHhRecord, updateHhApproveFlag } from "../../services/hhService";
 import { addNewHhLeaveRequest } from "../../services/leaveService";
+import { enhanceErrorWithAI } from "../../services/openaiService";
+import { UserMetaData } from "../../types/interface";
 import { replyMessage } from "../../utils/sendLineMsg";
 import { validateHhRequest } from "../../validations/validateHhReq";
-import { lineClient } from "../../configs/lineClient";
-import { pool } from "../../configs/database";
 
 export async function handleHhCommand(
   commandArr: string[],
   userMetaData: UserMetaData,
 ) {
   if (commandArr.length < 2) {
-    return replyMessage(
-      lineClient,
-      userMetaData.replyToken,
-      `⚠️ การใช้คำสั่ง "hh" ไม่ถูกต้อง ตัวอย่าง: "hh เพิ่ม 1h เหตุผล" หรือ "hh ใช้ 2h เหตุผล"`,
-    );
+    const baseError = `⚠️ การใช้คำสั่ง "hh" ไม่ถูกต้อง ตัวอย่าง: "hh เพิ่ม 1h เหตุผล" หรือ "hh ใช้ 2h เหตุผล"`;
+    const enhanced = await enhanceErrorWithAI(commandArr.join(" "), baseError);
+    return replyMessage(lineClient, userMetaData.replyToken, enhanced);
   }
 
   const hhSubCommand = commandArr[1];

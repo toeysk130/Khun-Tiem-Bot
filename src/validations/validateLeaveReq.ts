@@ -3,10 +3,11 @@ import {
   ncTypes,
   validLeaveTypes,
 } from "../configs/constants";
-import { validateInputDate } from "./validateInputDate";
-import { replyMessage } from "../utils/sendLineMsg";
 import { lineClient } from "../configs/lineClient";
+import { enhanceErrorWithAI } from "../services/openaiService";
 import { UserMetaData } from "../types/interface";
+import { replyMessage } from "../utils/sendLineMsg";
+import { validateInputDate } from "./validateInputDate";
 
 export async function validateLeaveRequest(
   userMetaData: UserMetaData,
@@ -30,13 +31,12 @@ export async function validateLeaveRequest(
 
   if (!isValidCommand) {
     const validTypes = command === "แจ้งลา" ? validLeaveTypes : ncTypes;
-    await replyMessage(
-      lineClient,
-      userMetaData.replyToken,
-      `⚠️ ประเภทวันลา '${leaveType}' ไม่มีในระบบ\
+    const baseError = `⚠️ ประเภทวันลา '${leaveType}' ไม่มีในระบบ\
       \n✅ ตัวเลือกที่มี ${validTypes.join(" ")}\
-      \n${leaveReqExampleMsg}`,
-    );
+      \n${leaveReqExampleMsg}`;
+    const userInput = commandArr.join(" ");
+    const enhanced = await enhanceErrorWithAI(userInput, baseError);
+    await replyMessage(lineClient, userMetaData.replyToken, enhanced);
     return false;
   }
 
