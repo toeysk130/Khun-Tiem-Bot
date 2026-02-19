@@ -14,16 +14,18 @@ export async function validateLeaveRequest(
   commandArr: string[],
 ): Promise<boolean> {
   const command = commandArr[0];
+
+  // Check minimum args before accessing array elements
+  const minArgs = command === "nc" ? 4 : 5;
+  if (commandArr.length < minArgs) {
+    await replyMessage(lineClient, userMetaData.replyToken, leaveReqExampleMsg);
+    return false;
+  }
+
   const leaveType = commandArr[1];
   const leaveDatePeriod = commandArr[2].toUpperCase();
   const leaveAmount = commandArr[3];
   const leaveKey = command === "nc" ? "key" : commandArr[4];
-
-  // Prompt for usage example
-  if (command === "แจ้งลา" && commandArr.length === 1) {
-    await replyMessage(lineClient, userMetaData.replyToken, leaveReqExampleMsg);
-    return false;
-  }
 
   const isValidCommand =
     (command === "แจ้งลา" && validLeaveTypes.includes(leaveType)) ||
