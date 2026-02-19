@@ -2,6 +2,7 @@ import { lineClient } from "../configs/lineClient";
 import { UserMetaData } from "../types/interface";
 import { replyMessage } from "../utils/sendLineMsg";
 import { handleApproveCommand } from "./commands/approveRequest";
+import { handleAskAICommand } from "./commands/askAICommand";
 import { handleDeleteRequest } from "./commands/deleteRequest";
 import { handleHhCommand } from "./commands/hhCommands";
 import {
@@ -68,6 +69,10 @@ export async function commandDispatcher(
       break;
     case "สถิติ":
       await handleStatsCommand(commandArr, userMetadata);
+      break;
+    case "ขุนเทียม":
+    case "ฝากด่า":
+      await handleAskAICommand(commandArr, userMetadata);
       break;
     default:
       await replyMessage(
