@@ -773,42 +773,52 @@ export function buildPersonalReportBubble(
   },
   yearLabel: string,
 ): FlexMessage {
-  const leaveRows = leaves.slice(0, 15).map((l) => ({
-    type: "box" as const,
-    layout: "horizontal" as const,
-    spacing: "sm" as const,
-    margin: "sm" as const,
-    contents: [
-      {
-        type: "text" as const,
-        text: statusEmoji(l.is_approve, l.status),
-        size: "sm" as const,
-        flex: 0,
-      },
-      {
-        type: "text" as const,
-        text: `<${l.id}>`,
-        size: "xxs" as const,
-        flex: 1,
-        color: COLORS.muted,
-      },
-      {
-        type: "text" as const,
-        text: l.leave_type,
-        size: "xs" as const,
-        flex: 2,
-        color: COLORS.dark,
-      },
-      {
-        type: "text" as const,
-        text: getDisplayLeaveDate(l.leave_start_dt, l.leave_end_dt),
-        size: "xxs" as const,
-        flex: 3,
-        color: COLORS.muted,
-        align: "end" as const,
-      },
-    ],
-  }));
+  const FIRST_PAGE_LIMIT = 15;
+  const NEXT_PAGE_LIMIT = 20;
+
+  // Helper: build leave rows
+  function buildLeaveRows(items: ILeaveSchedule[]) {
+    return items.map((l) => ({
+      type: "box" as const,
+      layout: "horizontal" as const,
+      spacing: "sm" as const,
+      margin: "sm" as const,
+      contents: [
+        {
+          type: "text" as const,
+          text: statusEmoji(l.is_approve, l.status),
+          size: "sm" as const,
+          flex: 0,
+        },
+        {
+          type: "text" as const,
+          text: `<${l.id}>`,
+          size: "xxs" as const,
+          flex: 1,
+          color: COLORS.muted,
+        },
+        {
+          type: "text" as const,
+          text: l.leave_type,
+          size: "xs" as const,
+          flex: 2,
+          color: COLORS.dark,
+        },
+        {
+          type: "text" as const,
+          text: getDisplayLeaveDate(l.leave_start_dt, l.leave_end_dt),
+          size: "xxs" as const,
+          flex: 3,
+          color: COLORS.muted,
+          align: "end" as const,
+        },
+      ],
+    }));
+  }
+
+  // Build first bubble body
+  const firstPageLeaves = leaves.slice(0, FIRST_PAGE_LIMIT);
+  const firstLeaveRows = buildLeaveRows(firstPageLeaves);
 
   const bodyContents: any[] = [
     {
@@ -833,8 +843,8 @@ export function buildPersonalReportBubble(
       ],
     },
     { type: "separator" as const, margin: "md" as const },
-    ...(leaveRows.length > 0
-      ? leaveRows
+    ...(firstLeaveRows.length > 0
+      ? firstLeaveRows
       : [
           {
             type: "text" as const,
@@ -847,18 +857,7 @@ export function buildPersonalReportBubble(
         ]),
   ];
 
-  if (leaves.length > 15) {
-    bodyContents.push({
-      type: "text" as const,
-      text: `... อีก ${leaves.length - 15} รายการ`,
-      size: "xxs" as const,
-      color: COLORS.muted,
-      margin: "sm" as const,
-      align: "center" as const,
-    });
-  }
-
-  // HH pending section
+  // HH pending section (first bubble only)
   if (hhInfo.pendingHH.length > 0) {
     bodyContents.push({ type: "separator" as const, margin: "md" as const });
     bodyContents.push({
@@ -880,7 +879,14 @@ export function buildPersonalReportBubble(
     });
   }
 
-  const bubble: FlexBubble = {
+  // Calculate total pages
+  const remaining = leaves.length - FIRST_PAGE_LIMIT;
+  const extraPages = remaining > 0 ? Math.ceil(remaining / NEXT_PAGE_LIMIT) : 0;
+  const totalPages = 1 + Math.min(extraPages, 11); // LINE max 12 bubbles
+
+  const pageLabel = totalPages > 1 ? ` (1/${totalPages})` : "";
+
+  const firstBubble: FlexBubble = {
     type: "bubble",
     size: "mega",
     header: {
@@ -889,7 +895,7 @@ export function buildPersonalReportBubble(
       contents: [
         {
           type: "text",
-          text: `📋 ${member}`,
+          text: `📋 ${member}${pageLabel}`,
           weight: "bold",
           size: "md",
           color: "#FFFFFF",
@@ -912,10 +918,64 @@ export function buildPersonalReportBubble(
     },
   };
 
+  // Single page — return bubble directly
+  if (totalPages === 1) {
+    return {
+      type: "flex",
+      altText: `📋 รายการของ ${member} (${yearLabel})`,
+      contents: firstBubble,
+    };
+  }
+
+  // Multi-page — build Carousel
+  const bubbles: FlexBubble[] = [firstBubble];
+
+  for (let page = 2; page <= totalPages; page++) {
+    const start = FIRST_PAGE_LIMIT + (page - 2) * NEXT_PAGE_LIMIT;
+    const end = start + NEXT_PAGE_LIMIT;
+    const pageLeaves = leaves.slice(start, end);
+    const pageRows = buildLeaveRows(pageLeaves);
+
+    bubbles.push({
+      type: "bubble",
+      size: "mega",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: `📋 ${member} (${page}/${totalPages})`,
+            weight: "bold",
+            size: "md",
+            color: "#FFFFFF",
+          },
+          {
+            type: "text",
+            text: `${yearLabel} • รายการที่ ${start + 1}-${Math.min(end, leaves.length)}`,
+            size: "xs",
+            color: "#FFFFFFCC",
+          },
+        ],
+        backgroundColor: COLORS.primary,
+        paddingAll: "12px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: pageRows,
+        paddingAll: "12px",
+      },
+    });
+  }
+
   return {
     type: "flex",
-    altText: `📋 รายการของ ${member} (${yearLabel})`,
-    contents: bubble,
+    altText: `📋 รายการของ ${member} (${yearLabel}) ${leaves.length} รายการ`,
+    contents: {
+      type: "carousel",
+      contents: bubbles,
+    },
   };
 }
 
