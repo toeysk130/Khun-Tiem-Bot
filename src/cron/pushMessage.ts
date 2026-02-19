@@ -5,6 +5,7 @@ import {
   getAllWaitingApproval,
   getLeavesToday,
 } from "../repositories/leaveScheduleRepository";
+import { generateDailyGreeting } from "../services/openaiService";
 import { getColorEmoji, getDisplayLeaveDate } from "../utils/utils";
 import axios from "axios";
 import * as dotenv from "dotenv";
@@ -97,16 +98,44 @@ export async function pushReminderMessage() {
 
   const leavesTomorrow = await getLeavesToday(pool, tomorrowStr);
 
-  if (leavesTomorrow.length === 0) return; // No notification needed
+  // Build leave context for AI
+  const leaveContext = leavesTomorrow.map((l) => ({
+    member: l.member,
+    leaveType: l.leave_type,
+    period: l.period_detail,
+  }));
 
+  // Generate AI greeting (always, even with no leaves)
+  const aiGreeting = await generateDailyGreeting(leaveContext);
+
+  if (leavesTomorrow.length === 0) {
+    // No one on leave — just send fun AI message
+    if (aiGreeting) {
+      await axiosInstance
+        .post("", {
+          to: GROUP_ID,
+          messages: [{ type: "text", text: `🤖 ขุนเทียมบอก:\n${aiGreeting}` }],
+        })
+        .then((r) => console.log("AI greeting sent:", r.data))
+        .catch((e) => console.error("Error sending AI greeting:", e));
+    }
+    return;
+  }
+
+  // Has leaves — send reminder + AI message
   const memberList = leavesTomorrow
     .map((l) => `  • ${l.member} — ${l.leave_type} ${l.period_detail}`)
     .join("\n");
 
-  const msg = `🔔 เตือน! พรุ่งนี้มีคนลา ${leavesTomorrow.length} คน\n\n${memberList}`;
+  const reminderMsg = `🔔 เตือน! พรุ่งนี้มีคนลา ${leavesTomorrow.length} คน\n\n${memberList}`;
+
+  // Combine: reminder + AI greeting
+  const fullMsg = aiGreeting
+    ? `${reminderMsg}\n\n🤖 ขุนเทียมบอก:\n${aiGreeting}`
+    : reminderMsg;
 
   await axiosInstance
-    .post("", { to: GROUP_ID, messages: [{ type: "text", text: msg }] })
+    .post("", { to: GROUP_ID, messages: [{ type: "text", text: fullMsg }] })
     .then((response) => console.log("Reminder sent:", response.data))
     .catch((error) => console.error("Error sending reminder:", error));
 }
