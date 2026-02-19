@@ -12,7 +12,7 @@ async function callOpenAI(
     const response = await axios.post(
       OPENAI_URL,
       {
-        model: "gpt-4o",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage },
