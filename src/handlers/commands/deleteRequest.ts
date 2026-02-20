@@ -1,5 +1,6 @@
 import { pool } from "../../configs/database";
 import { lineClient } from "../../configs/lineClient";
+import { getRemainingHh, reverseHhUsage } from "../../repositories/happyHour";
 import {
   checkIfIdExist,
   checkIfMyIdExist,
@@ -78,9 +79,15 @@ export async function handleDeleteRequest(
 export async function executeDelete(replyToken: string, id: string) {
   try {
     const detail = await getLeaveById(pool, id);
+
+    // If this is an HH leave entry, reverse the HH deduction first
+    if (detail.leave_type === "hh") {
+      await reverseHhUsage(pool, detail.member, detail.description);
+    }
+
     await deleteLeaveById(pool, id);
 
-    const flex = buildResultBubble("success", `ลบรายการ <${id}> สำเร็จ`, [
+    const resultRows = [
       { label: "👤 ชื่อ", value: detail.member },
       { label: "📄 ประเภท", value: detail.leave_type },
       {
@@ -88,7 +95,22 @@ export async function executeDelete(replyToken: string, id: string) {
         value: getDisplayLeaveDate(detail.leave_start_dt, detail.leave_end_dt),
       },
       { label: "⏰ ช่วง", value: detail.period_detail },
-    ]);
+    ];
+
+    // Show remaining HH balance after reversal
+    if (detail.leave_type === "hh") {
+      const remaining = await getRemainingHh(pool, detail.member);
+      resultRows.push({
+        label: "❤️ HH คงเหลือ",
+        value: `${remaining}h`,
+      });
+    }
+
+    const flex = buildResultBubble(
+      "success",
+      `ลบรายการ <${id}> สำเร็จ`,
+      resultRows,
+    );
     await replyFlexMessage(lineClient, replyToken, flex);
   } catch (error) {
     console.error("Error executing delete:", error);

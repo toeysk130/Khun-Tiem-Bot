@@ -49,6 +49,25 @@ export async function delHhRecord(
   await pool.query(query, values);
 }
 
+// Reverse HH usage — delete the 'ใช้' deduction record to restore hours
+export async function reverseHhUsage(
+  pool: Pool,
+  member: string,
+  description: string,
+) {
+  // Delete the most recent matching 'ใช้' record for this member
+  const query = `
+    DELETE FROM happy_hour
+    WHERE id = (
+      SELECT id FROM happy_hour
+      WHERE member = $1 AND type = 'ใช้' AND description = $2
+      ORDER BY datetime DESC
+      LIMIT 1
+    )
+  `;
+  await pool.query(query, [member, description]);
+}
+
 // Get unapproved happy hours
 export async function getNotApprvHh(pool: Pool, member: string) {
   const query = `
