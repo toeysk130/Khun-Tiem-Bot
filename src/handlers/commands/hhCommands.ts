@@ -104,8 +104,8 @@ async function handleUseHhRequest(
   userMetaData: UserMetaData,
   replyToken: string,
 ) {
-  // hh ใช้ creates a leave entry — must be in group chat
-  if (userMetaData.chatType !== "GROUP") {
+  // hh ใช้ creates a leave entry — must be in group chat (admin can bypass)
+  if (userMetaData.chatType !== "GROUP" && !userMetaData.isAdmin) {
     return replyMessage(
       lineClient,
       replyToken,

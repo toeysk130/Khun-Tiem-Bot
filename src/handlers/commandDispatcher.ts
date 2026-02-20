@@ -91,10 +91,11 @@ export async function commandDispatcher(
   commandArr: string[],
   skipAIComment: boolean = false,
 ) {
-  // Block leave commands in personal chat
+  // Block leave commands in personal chat (admin can bypass)
   if (
     GROUP_ONLY_COMMANDS.includes(command) &&
-    userMetadata.chatType !== "GROUP"
+    userMetadata.chatType !== "GROUP" &&
+    !userMetadata.isAdmin
   ) {
     return replyMessage(
       lineClient,

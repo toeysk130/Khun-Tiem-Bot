@@ -80,6 +80,7 @@ export async function handleShowCommands(replyToken: string) {
   // ─── Card 1: วันลา ───
   const leaveCard = makeBubble("📝", "วันลา", "#2980B9", [
     cmdBlock("แจ้งลา", "แจ้งลา ลาพักร้อน 01FEB26 1วัน key ไปเที่ยว"),
+    cmdBlock("แจ้งลาง่าย (เลือกจากปฏิทิน)", "แจ้งลาง่าย"),
     cmdBlock("nc (ไม่นับวันลา)", "nc อบรม 01FEB26 1วัน หลักสูตร XYZ"),
     cmdBlock("อัปเดต สถานะ", "อัปเดต 42 key\nอัปเดต 42 cer"),
     cmdBlock("ลบ รายการ", "ลบ 42"),
@@ -89,6 +90,7 @@ export async function handleShowCommands(replyToken: string) {
   const hhCard = makeBubble("❤️", "Happy Hour", "#E74C3C", [
     cmdBlock("hh เพิ่ม (ขอ HH ใหม่)", "hh เพิ่ม 2h OT วัน launch"),
     cmdBlock("hh ใช้ (ใช้ HH แลกลา)", "hh ใช้ 4h 01FEB26 ครึ่งเช้า ธุระ"),
+    cmdBlock("hh approve", "hh approve 5\nhh approve 5 6"),
   ]);
 
   // ─── Card 3: ดูข้อมูล ───
@@ -98,19 +100,30 @@ export async function handleShowCommands(replyToken: string) {
       "รายงาน ของฉัน\nรายงาน วันนี้\nรายงาน วีคนี้\nรายงาน เดือนนี้",
     ),
     cmdBlock("แอบดู (ดูของคนอื่น)", "แอบดู สมชาย"),
-    cmdBlock("สรุป วันลา", "สรุป\nสรุป ทีม (👑 admin)"),
+    cmdBlock("สรุป วันลา", "สรุป\nสรุป ทั้งหมด\nสรุป ทีม (👑 admin)"),
     cmdBlock("สถิติ ประจำเดือน 🏆", "สถิติ"),
+    cmdBlock("ภาพรวม (ใครลาสัปดาห์นี้)", "ภาพรวม"),
     cmdBlock("ตาราง สมาชิก + HH", "ตาราง member"),
   ]);
 
-  // ─── Card 4: Admin ───
-  const adminCard = makeBubble("👑", "Admin", "#8E44AD", [
+  // ─── Card 4: Admin & เครื่องมือ ───
+  const adminCard = makeBubble("👑", "Admin & เครื่องมือ", "#8E44AD", [
     cmdBlock("approve วันลา", "approve 42\napprove 42 43 44"),
-    cmdBlock("hh approve", "hh approve 5\nhh approve 5 6"),
     cmdBlock("เตือน (ดูรายการรอ)", "เตือน approve"),
+    cmdBlock("สมัคร สมาชิกใหม่", "สมัคร สมชาย"),
+    cmdBlock("ลบสมาชิก", "ลบสมาชิก สมชาย"),
+  ]);
+
+  // ─── Card 5: AI & โหมด ───
+  const aiCard = makeBubble("🤖", "AI & โหมด", "#E67E22", [
     cmdBlock(
-      "💡 Tip",
-      'เพิ่ม "ทั้งหมด" หลังคำสั่งเพื่อดูย้อนหลัง\nเช่น: รายงาน ของฉัน ทั้งหมด',
+      "ถาม AI อะไรก็ได้",
+      "ขุนเทียม พรุ่งนี้อยากลาทำไง?\nขุนเทียม มีใครลาบ้าง",
+    ),
+    cmdBlock("โหมด AI (สุภาพ/ก้าวร้าว)", "โหมด สุภาพ\nโหมด ก้าวร้าว"),
+    cmdBlock(
+      "💡 Tips",
+      'เพิ่ม "ทั้งหมด" หลังคำสั่งเพื่อดูย้อนหลัง\n👑 Admin แจ้งลาใน DM ได้',
     ),
   ]);
 
@@ -119,7 +132,7 @@ export async function handleShowCommands(replyToken: string) {
     altText: "🤖 รายการคำสั่ง Khun-Tiem",
     contents: {
       type: "carousel",
-      contents: [leaveCard, hhCard, reportCard, adminCard],
+      contents: [leaveCard, hhCard, reportCard, adminCard, aiCard],
     },
   };
 

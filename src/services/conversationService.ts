@@ -225,11 +225,12 @@ export async function handleConversation(
     return;
   }
 
-  // Block leave-related intents in personal chat
+  // Block leave-related intents in personal chat (admin can bypass)
   const leaveIntents = ["แจ้งลา", "nc", "hh"];
   if (
     leaveIntents.includes(result.intent) &&
-    userMetadata.chatType !== "GROUP"
+    userMetadata.chatType !== "GROUP" &&
+    !userMetadata.isAdmin
   ) {
     sessions.delete(userId);
     await replyMessage(
