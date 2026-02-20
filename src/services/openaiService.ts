@@ -165,3 +165,96 @@ export async function generateAIComment(
 
   return callOpenAI(systemPrompt, context, 80);
 }
+
+// ── Natural Language → Command Parser ──
+
+export interface ParsedCommand {
+  intent: string | null; // "แจ้งลา" | "hh" | "ลบ" | "อัปเดต" | null
+  command: string | null; // complete command string or null
+  question: string | null; // follow-up question if info incomplete
+}
+
+export async function parseNaturalLanguageCommand(
+  conversationHistory: { role: string; content: string }[],
+  username: string,
+): Promise<ParsedCommand | null> {
+  const today = new Date();
+  const months = [
+    "JAN",
+    "FEB",
+    "MAR",
+    "APR",
+    "MAY",
+    "JUN",
+    "JUL",
+    "AUG",
+    "SEP",
+    "OCT",
+    "NOV",
+    "DEC",
+  ];
+  const dd = String(today.getDate()).padStart(2, "0");
+  const mmm = months[today.getMonth()];
+  const yy = String(today.getFullYear()).slice(-2);
+  const currentDate = `${dd}${mmm}${yy}`;
+
+  const systemPrompt = `${BOT_CONTEXT}
+
+วันนี้คือ ${currentDate} (${today.toLocaleDateString("th-TH", { weekday: "long", year: "numeric", month: "long", day: "numeric" })})
+ชื่อผู้ใช้คือ "${username}"
+
+คุณเป็นตัวช่วยแปลงภาษาธรรมชาติเป็นคำสั่ง Bot
+ผู้ใช้อาจพูดแบบธรรมชาติ เช่น "พรุ่งนี้ลาพักร้อนนะ ครึ่งบ่าย" ให้แปลงเป็นคำสั่งที่สมบูรณ์
+
+กฎสำคัญ:
+1. ถ้าข้อความไม่เกี่ยวกับ แจ้งลา/hh/ลบ/อัปเดต ให้ intent = null
+2. ถ้าข้อมูลครบ → สร้าง command ที่สมบูรณ์
+3. ถ้าข้อมูลไม่ครบ → ถามเฉพาะสิ่งที่ขาด ถามให้ครบในรอบเดียว สั้นกระชับ
+4. "พรุ่งนี้" = วันถัดไป, "มะรืน" = 2 วันถัดไป แปลงเป็นรูปแบบ DD${mmm}${yy}
+5. ถ้าไม่ระบุ key/nokey → ใช้ key เป็นค่าเริ่มต้น
+6. ถ้าไม่ระบุจำนวนวัน → คำนวณจากวันที่เริ่ม-สิ้นสุด หรือใช้ 1วัน
+7. command จะต้องเป็นตัวพิมพ์เล็กทั้งหมด ยกเว้นวันที่ (DDMMMYY)
+
+ตอบเป็น JSON เท่านั้น ห้ามมีข้อความอื่น:
+{
+  "intent": "แจ้งลา" | "hh" | "ลบ" | "อัปเดต" | null,
+  "command": "คำสั่งสมบูรณ์" | null,
+  "question": "คำถามที่ต้องการข้อมูลเพิ่ม" | null
+}`;
+
+  try {
+    const messages = [
+      { role: "system", content: systemPrompt },
+      ...conversationHistory,
+    ];
+
+    const response = await axios.post(
+      OPENAI_URL,
+      {
+        model: "gpt-4o-mini",
+        messages,
+        max_tokens: 200,
+        temperature: 0.3,
+        response_format: { type: "json_object" },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    const content = response.data?.choices?.[0]?.message?.content;
+    if (!content) return null;
+
+    const parsed = JSON.parse(content) as ParsedCommand;
+    return parsed;
+  } catch (error: any) {
+    console.error(
+      "parseNaturalLanguageCommand error:",
+      error?.response?.data || error.message,
+    );
+    return null;
+  }
+}
