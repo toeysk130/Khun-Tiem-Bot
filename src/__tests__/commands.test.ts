@@ -390,7 +390,7 @@ describe("Command Handlers", () => {
       expect(lineClient.replyMessage).toHaveBeenCalledWith(
         adminMetadata.replyToken,
         expect.objectContaining({
-          text: expect.stringContaining("Invalid usage"),
+          text: expect.stringContaining("ตัวอย่าง"),
         }),
       );
     });
