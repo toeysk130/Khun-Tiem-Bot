@@ -25,6 +25,8 @@ export const validBotCommands = [
   "ลบสมาชิก",
   "คำสั่ง",
   "โหมด",
+  "ภาพรวม",
+  "แจ้งลาง่าย",
 ];
 
 export const validKeyStatus = ["key", "nokey", "cer", "nocer"];

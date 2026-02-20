@@ -26,3 +26,8 @@ export async function deleteMemberByName(
   const result = await pool.query(`DELETE FROM member WHERE name = $1`, [name]);
   return (result.rowCount ?? 0) > 0;
 }
+
+export async function getAllMemberNames(pool: pg.Pool): Promise<string[]> {
+  const { rows } = await pool.query(`SELECT name FROM member ORDER BY name`);
+  return rows.map((r: { name: string }) => r.name);
+}

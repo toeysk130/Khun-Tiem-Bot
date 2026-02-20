@@ -1304,3 +1304,214 @@ export function buildResultBubble(
     contents: bubble,
   };
 }
+
+// ══════════════════════════════════════════════════════════
+// Leave Date Picker Flow — Interactive leave request via Flex
+// ══════════════════════════════════════════════════════════
+
+export function buildLeaveTypePickerBubble(): FlexMessage {
+  const types = ["ลาพักร้อน", "ลาป่วย", "ลากิจ"];
+
+  const buttons = types.map((t) => ({
+    type: "button" as const,
+    style: "primary" as const,
+    color: COLORS.primary,
+    action: {
+      type: "datetimepicker" as const,
+      label: t,
+      data: `action=leave_date&type=${t}`,
+      mode: "date" as const,
+    },
+    margin: "sm" as const,
+    height: "sm" as const,
+  }));
+
+  const bubble: FlexBubble = {
+    type: "bubble",
+    size: "kilo",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: "📅 แจ้งลาง่าย",
+          weight: "bold",
+          size: "lg",
+          color: "#FFFFFF",
+        },
+        {
+          type: "text",
+          text: "เลือกประเภทลา แล้วเลือกวันที่",
+          size: "xs",
+          color: "#FFFFFFCC",
+        },
+      ],
+      backgroundColor: COLORS.primary,
+      paddingAll: "16px",
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      contents: buttons,
+      paddingAll: "12px",
+      spacing: "sm",
+    },
+  };
+
+  return {
+    type: "flex",
+    altText: "📅 แจ้งลาง่าย — เลือกประเภทลา",
+    contents: bubble,
+  };
+}
+
+export function buildLeavePeriodPickerBubble(
+  leaveType: string,
+  date: string,
+): FlexMessage {
+  const periods = [
+    { label: "🌞 เต็มวัน", value: "1วัน" },
+    { label: "🌅 ครึ่งเช้า", value: "ครึ่งเช้า" },
+    { label: "🌇 ครึ่งบ่าย", value: "ครึ่งบ่าย" },
+  ];
+
+  const buttons = periods.map((p) => ({
+    type: "button" as const,
+    style: (p.value === "1วัน" ? "primary" : "secondary") as
+      | "primary"
+      | "secondary",
+    color: p.value === "1วัน" ? COLORS.primary : undefined,
+    action: {
+      type: "postback" as const,
+      label: p.label,
+      data: `action=leave_period&type=${leaveType}&date=${date}&period=${p.value}`,
+    },
+    margin: "sm" as const,
+    height: "sm" as const,
+  }));
+
+  const bubble: FlexBubble = {
+    type: "bubble",
+    size: "kilo",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: `📅 ${leaveType}`,
+          weight: "bold",
+          size: "md",
+          color: "#FFFFFF",
+        },
+        {
+          type: "text",
+          text: `วันที่: ${date}`,
+          size: "xs",
+          color: "#FFFFFFCC",
+        },
+      ],
+      backgroundColor: COLORS.warning,
+      paddingAll: "16px",
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: "เลือกช่วงเวลา",
+          size: "sm",
+          color: COLORS.dark,
+          weight: "bold",
+        },
+        ...buttons,
+      ],
+      paddingAll: "12px",
+      spacing: "sm",
+    },
+  };
+
+  return {
+    type: "flex",
+    altText: `📅 ${leaveType} ${date} — เลือกช่วงเวลา`,
+    contents: bubble,
+  };
+}
+
+export function buildLeaveKeyPickerBubble(
+  leaveType: string,
+  date: string,
+  period: string,
+): FlexMessage {
+  const bubble: FlexBubble = {
+    type: "bubble",
+    size: "kilo",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: `📅 ${leaveType}`,
+          weight: "bold",
+          size: "md",
+          color: "#FFFFFF",
+        },
+        {
+          type: "text",
+          text: `${date} • ${period}`,
+          size: "xs",
+          color: "#FFFFFFCC",
+        },
+      ],
+      backgroundColor: COLORS.info,
+      paddingAll: "16px",
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: "มี Key ลาไหม?",
+          size: "sm",
+          color: COLORS.dark,
+          weight: "bold",
+        },
+        {
+          type: "button" as const,
+          style: "primary" as const,
+          color: COLORS.success,
+          action: {
+            type: "postback" as const,
+            label: "✅ มี Key ลา",
+            data: `action=leave_confirm&type=${leaveType}&date=${date}&period=${period}&key=key`,
+          },
+          margin: "sm" as const,
+          height: "sm" as const,
+        },
+        {
+          type: "button" as const,
+          style: "secondary" as const,
+          action: {
+            type: "postback" as const,
+            label: "❌ ไม่มี Key ลา",
+            data: `action=leave_confirm&type=${leaveType}&date=${date}&period=${period}&key=nokey`,
+          },
+          margin: "sm" as const,
+          height: "sm" as const,
+        },
+      ],
+      paddingAll: "12px",
+      spacing: "sm",
+    },
+  };
+
+  return {
+    type: "flex",
+    altText: `📅 ${leaveType} ${date} — มี Key ลาไหม?`,
+    contents: bubble,
+  };
+}

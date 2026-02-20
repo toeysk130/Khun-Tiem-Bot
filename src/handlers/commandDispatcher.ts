@@ -1,8 +1,12 @@
 import { lineClient } from "../configs/lineClient";
 import { generateAIComment } from "../services/openaiService";
 import { UserMetaData } from "../types/interface";
+import { buildLeaveTypePickerBubble } from "../utils/flexMessage";
 import {
+  QuickReplyLabel,
+  attachQuickReply,
   flushReplyBuffer,
+  replyFlexMessage,
   replyMessage,
   startReplyBuffer,
 } from "../utils/sendLineMsg";
@@ -20,6 +24,7 @@ import { handleRegisterCommand } from "./commands/registerMember";
 import {
   handleOtherReport,
   handleReportCommand,
+  handleVisualWeekReport,
   handleWarningReport,
 } from "./commands/reportRequest";
 import { handleShowCommands } from "./commands/showCommands";
@@ -45,6 +50,40 @@ const QUIET_COMMANDS = [
 
 // Commands that must be used in Group Chat only
 const GROUP_ONLY_COMMANDS = ["แจ้งลา", "nc"];
+
+// Quick reply buttons shown after successful commands
+const QUICK_REPLY_MAP: Record<string, QuickReplyLabel[]> = {
+  แจ้งลา: [
+    { label: "📋 รายงาน ของฉัน", text: "รายงาน ของฉัน" },
+    { label: "📊 สรุป", text: "สรุป" },
+    { label: "📅 ภาพรวม", text: "ภาพรวม" },
+  ],
+  nc: [
+    { label: "📋 รายงาน ของฉัน", text: "รายงาน ของฉัน" },
+    { label: "📊 สรุป", text: "สรุป" },
+  ],
+  hh: [
+    { label: "📋 รายงาน ของฉัน", text: "รายงาน ของฉัน" },
+    { label: "📊 สรุป", text: "สรุป" },
+  ],
+  รายงาน: [
+    { label: "📊 สรุป", text: "สรุป" },
+    { label: "📈 สถิติ", text: "สถิติ" },
+    { label: "📅 ภาพรวม", text: "ภาพรวม" },
+  ],
+  สรุป: [
+    { label: "📋 รายงาน ของฉัน", text: "รายงาน ของฉัน" },
+    { label: "📈 สถิติ", text: "สถิติ" },
+  ],
+  approve: [
+    { label: "📋 รายงาน วันนี้", text: "รายงาน วันนี้" },
+    { label: "🔔 เตือน", text: "เตือน" },
+  ],
+  สถิติ: [
+    { label: "📊 สรุป ทีม", text: "สรุป ทีม" },
+    { label: "📅 ภาพรวม", text: "ภาพรวม" },
+  ],
+};
 
 export async function commandDispatcher(
   userMetadata: UserMetaData,
@@ -140,6 +179,14 @@ export async function commandDispatcher(
       case "โหมด":
         await handleModeCommand(commandArr, userMetadata);
         break;
+      case "ภาพรวม":
+        await handleVisualWeekReport(userMetadata.replyToken);
+        break;
+      case "แจ้งลาง่าย": {
+        const flex = buildLeaveTypePickerBubble();
+        await replyFlexMessage(lineClient, userMetadata.replyToken, flex);
+        break;
+      }
       default:
         wasSuccessful = false;
         await replyMessage(
@@ -169,6 +216,12 @@ export async function commandDispatcher(
       } catch {
         // AI is optional — silently ignore
       }
+    }
+
+    // Attach contextual quick reply buttons
+    const quickItems = QUICK_REPLY_MAP[command];
+    if (wasSuccessful && quickItems) {
+      attachQuickReply(userMetadata.replyToken, quickItems);
     }
 
     await flushReplyBuffer(lineClient, userMetadata.replyToken, extraMessages);

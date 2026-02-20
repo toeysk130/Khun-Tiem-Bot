@@ -59,5 +59,42 @@ export async function replyMessages(
   await client.replyMessage(replyToken, messages);
 }
 
+// ── Quick Reply Helpers ──
+
+export interface QuickReplyLabel {
+  label: string; // display text (max 20 chars)
+  text?: string; // text to send (defaults to label)
+}
+
+export function makeQuickReplyItems(
+  items: QuickReplyLabel[],
+): {
+  type: "action";
+  action: { type: "message"; label: string; text: string };
+}[] {
+  return items.map((item) => ({
+    type: "action" as const,
+    action: {
+      type: "message" as const,
+      label: item.label.slice(0, 20),
+      text: item.text ?? item.label,
+    },
+  }));
+}
+
+/**
+ * Attach quick reply buttons to the last message in the reply buffer.
+ * Call this BEFORE flushReplyBuffer.
+ */
+export function attachQuickReply(replyToken: string, items: QuickReplyLabel[]) {
+  const buffer = replyBuffers.get(replyToken);
+  if (!buffer || buffer.length === 0) return;
+
+  const lastMsg = buffer[buffer.length - 1];
+  (lastMsg as any).quickReply = {
+    items: makeQuickReplyItems(items),
+  };
+}
+
 // Alias for backward compatibility
 export const pushMsg = replyMessage;

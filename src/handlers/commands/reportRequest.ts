@@ -14,6 +14,7 @@ import {
   getWaitingApproval,
 } from "../../repositories/leaveScheduleRepository";
 import { getNotApprovedHh } from "../../repositories/leaveScheduleRepository";
+import { getAllMemberNames } from "../../repositories/memberRepository";
 import {
   formatLeaveDetail,
   formatLeaveDetailWithKey,
@@ -309,4 +310,81 @@ export async function buildWeeklyReportData(reportType: string) {
 export async function buildWeeklyReport(reportType: string) {
   const { textMsg } = await buildWeeklyReportData(reportType);
   return textMsg;
+}
+
+// ── Visual Weekly Summary (emoji grid) ──
+
+export async function handleVisualWeekReport(replyToken: string) {
+  try {
+    const allMembers = await getAllMemberNames(pool);
+    const currentWeekDates = getCurrentWeekDate(
+      new Date(getCurrentDateString()),
+    );
+    const startDate = currentWeekDates[0].date;
+    const endDate = currentWeekDates[currentWeekDates.length - 1].date;
+
+    const leaves = await getLeavesByDateRange(pool, startDate, endDate);
+
+    // Format header dates
+    const startShort = startDate.split("-").slice(1).join("").toUpperCase();
+    const endShort = endDate.split("-").slice(1).join("").toUpperCase();
+
+    const dayLabels = ["จ ", "อ ", "พ ", "พฤ", "ศ "];
+    let text = `📅 ภาพรวมสัปดาห์ ${startShort}-${endShort}\n`;
+    text += `👥 ทีม ${allMembers.length} คน\n\n`;
+
+    currentWeekDates.forEach((weekDate, i) => {
+      // Find who's on leave this day
+      const onLeave: { member: string; type: string; period: string }[] = [];
+      leaves.forEach((leave) => {
+        if (
+          weekDate.date >= leave.leave_start_dt &&
+          weekDate.date <= leave.leave_end_dt
+        ) {
+          onLeave.push({
+            member: leave.member,
+            type: leave.leave_type,
+            period: leave.period_detail,
+          });
+        }
+      });
+
+      const presentCount = allMembers.length - onLeave.length;
+      const dots =
+        "🟢".repeat(Math.max(0, presentCount)) + "🔴".repeat(onLeave.length);
+
+      const label = dayLabels[i] || weekDate.day;
+      text += `${label} ${dots}`;
+
+      if (onLeave.length === 0) {
+        text += " ✨ครบทีม";
+      } else {
+        const names = onLeave
+          .map(
+            (l) =>
+              `${l.member}(${l.type}${
+                l.period.startsWith("ครึ่ง") ? `-${l.period}` : ""
+              })`,
+          )
+          .join(", ");
+        text += ` ${names}`;
+      }
+      text += "\n";
+    });
+
+    // Summary line
+    const totalLeaveCount = new Set(
+      leaves.map((l) => `${l.member}-${l.leave_start_dt}`),
+    ).size;
+    text += `\n📊 สัปดาห์นี้มีลาทั้งหมด ${totalLeaveCount} รายการ`;
+
+    await replyMessage(lineClient, replyToken, text);
+  } catch (error) {
+    console.error("Error in visual week report:", error);
+    await replyMessage(
+      lineClient,
+      replyToken,
+      "❌ เกิดข้อผิดพลาดขณะสร้างภาพรวมสัปดาห์",
+    );
+  }
 }
