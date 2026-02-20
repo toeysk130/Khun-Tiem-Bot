@@ -45,9 +45,12 @@ export async function commandDispatcher(
   userMetadata: UserMetaData,
   command: string,
   commandArr: string[],
+  skipAIComment: boolean = false,
 ) {
   const skipAI =
-    AI_POWERED_COMMANDS.includes(command) || QUIET_COMMANDS.includes(command);
+    skipAIComment ||
+    AI_POWERED_COMMANDS.includes(command) ||
+    QUIET_COMMANDS.includes(command);
 
   // Start buffering replies so we can bundle AI comment together
   if (!skipAI) {
