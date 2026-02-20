@@ -1,6 +1,9 @@
 import { pool } from "../../configs/database";
 import { lineClient } from "../../configs/lineClient";
-import { checkIfHhIdExist } from "../../repositories/happyHour";
+import {
+  checkIfHhIdExist,
+  getNotApproveHHLists,
+} from "../../repositories/happyHour";
 import { addHhRecord, updateHhApproveFlag } from "../../services/hhService";
 import { addNewHhLeaveRequest } from "../../services/leaveService";
 import { enhanceErrorWithAI } from "../../services/openaiService";
@@ -138,13 +141,28 @@ async function handleHhApproveRequest(
     return replyMessage(
       lineClient,
       replyToken,
-      `⚠️ การใช้คำสั่ง "hh approve" ไม่ถูกต้อง ตัวอย่าง: "hh approve 8" หรือ "hh approve 3,4,8"`,
+      '⚠️ การใช้คำสั่ง "hh approve" ไม่ถูกต้อง ตัวอย่าง: "hh approve 8" หรือ "hh approve 3,4,8" หรือ "hh approve all"',
     );
   }
 
-  const ids = commandArr[2].split(",").map((item) => Number(item.trim()));
-
   try {
+    let ids: number[];
+
+    if (commandArr[2].toLowerCase() === "all") {
+      // Approve ALL pending HH records
+      const pendingList = await getNotApproveHHLists(pool);
+      if (pendingList.length === 0) {
+        return replyMessage(
+          lineClient,
+          replyToken,
+          "✅ ไม่มี HH ที่รอ Approve แล้ว",
+        );
+      }
+      ids = pendingList.map((hh) => hh.id);
+    } else {
+      ids = commandArr[2].split(",").map((item) => Number(item.trim()));
+    }
+
     for (const id of ids) {
       const exists = await checkIfHhIdExist(pool, id.toString());
       if (!exists) {
@@ -157,17 +175,12 @@ async function handleHhApproveRequest(
     }
 
     await updateHhApproveFlag(pool, lineClient, replyToken, ids);
-    await replyMessage(
-      lineClient,
-      replyToken,
-      `✅ อนุมัติ Happy Hour สำเร็จสำหรับ ID: ${ids.join(", ")}`,
-    );
   } catch (error) {
     console.error("Error approving HH IDs:", error);
     await replyMessage(
       lineClient,
       replyToken,
-      `❌ เกิดข้อผิดพลาดขณะอนุมัติ Happy Hour กรุณาลองใหม่อีกครั้งภายหลัง`,
+      "❌ เกิดข้อผิดพลาดขณะอนุมัติ Happy Hour กรุณาลองใหม่อีกครั้งภายหลัง",
     );
   }
 }

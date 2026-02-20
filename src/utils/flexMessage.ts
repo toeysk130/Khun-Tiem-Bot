@@ -778,42 +778,60 @@ export function buildPersonalReportBubble(
 
   // Helper: build leave rows
   function buildLeaveRows(items: ILeaveSchedule[]) {
-    return items.map((l) => ({
-      type: "box" as const,
-      layout: "horizontal" as const,
-      spacing: "sm" as const,
-      margin: "sm" as const,
-      contents: [
-        {
+    const rows: any[] = [];
+    items.forEach((l) => {
+      // Main row: emoji + ID + type + date
+      rows.push({
+        type: "box" as const,
+        layout: "horizontal" as const,
+        spacing: "sm" as const,
+        margin: "sm" as const,
+        contents: [
+          {
+            type: "text" as const,
+            text: statusEmoji(l.is_approve, l.status),
+            size: "sm" as const,
+            flex: 0,
+          },
+          {
+            type: "text" as const,
+            text: `<${l.id}>`,
+            size: "xxs" as const,
+            flex: 1,
+            color: COLORS.muted,
+          },
+          {
+            type: "text" as const,
+            text: l.leave_type,
+            size: "xs" as const,
+            flex: 2,
+            color: COLORS.dark,
+          },
+          {
+            type: "text" as const,
+            text: getDisplayLeaveDate(l.leave_start_dt, l.leave_end_dt),
+            size: "xxs" as const,
+            flex: 3,
+            color: COLORS.muted,
+            align: "end" as const,
+          },
+        ],
+      });
+      // Detail row: period + description
+      const detail = [l.period_detail, l.description]
+        .filter(Boolean)
+        .join(" • ");
+      if (detail) {
+        rows.push({
           type: "text" as const,
-          text: statusEmoji(l.is_approve, l.status),
-          size: "sm" as const,
-          flex: 0,
-        },
-        {
-          type: "text" as const,
-          text: `<${l.id}>`,
+          text: `     ${detail}`,
           size: "xxs" as const,
-          flex: 1,
           color: COLORS.muted,
-        },
-        {
-          type: "text" as const,
-          text: l.leave_type,
-          size: "xs" as const,
-          flex: 2,
-          color: COLORS.dark,
-        },
-        {
-          type: "text" as const,
-          text: getDisplayLeaveDate(l.leave_start_dt, l.leave_end_dt),
-          size: "xxs" as const,
-          flex: 3,
-          color: COLORS.muted,
-          align: "end" as const,
-        },
-      ],
-    }));
+          margin: "none" as const,
+        });
+      }
+    });
+    return rows;
   }
 
   // Build first bubble body
