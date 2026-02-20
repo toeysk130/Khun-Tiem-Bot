@@ -104,6 +104,15 @@ async function handleUseHhRequest(
   userMetaData: UserMetaData,
   replyToken: string,
 ) {
+  // hh ใช้ creates a leave entry — must be in group chat
+  if (userMetaData.chatType !== "GROUP") {
+    return replyMessage(
+      lineClient,
+      replyToken,
+      "📢 การใช้ HH ต้องทำในห้อง Group Chat เท่านั้นนะคะ เพื่อให้ทุกคนในทีมเห็น!",
+    );
+  }
+
   const isValidRequest = await validateHhRequest(userMetaData, commandArr);
   if (!isValidRequest) return;
 

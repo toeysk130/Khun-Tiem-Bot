@@ -41,12 +41,27 @@ const QUIET_COMMANDS = [
   "เตือน",
 ];
 
+// Commands that must be used in Group Chat only
+const GROUP_ONLY_COMMANDS = ["แจ้งลา", "nc"];
+
 export async function commandDispatcher(
   userMetadata: UserMetaData,
   command: string,
   commandArr: string[],
   skipAIComment: boolean = false,
 ) {
+  // Block leave commands in personal chat
+  if (
+    GROUP_ONLY_COMMANDS.includes(command) &&
+    userMetadata.chatType !== "GROUP"
+  ) {
+    return replyMessage(
+      lineClient,
+      userMetadata.replyToken,
+      "📢 การแจ้งลาต้องทำในห้อง Group Chat เท่านั้นนะคะ เพื่อให้ทุกคนในทีมเห็น!",
+    );
+  }
+
   const skipAI =
     skipAIComment ||
     AI_POWERED_COMMANDS.includes(command) ||
