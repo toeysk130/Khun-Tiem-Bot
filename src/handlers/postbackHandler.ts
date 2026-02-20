@@ -3,6 +3,7 @@ import { lineClient } from "../configs/lineClient";
 import { getMemberByUid } from "../repositories/memberRepository";
 import { UserMetaData } from "../types/interface";
 import {
+  buildHhHoursPickerBubble,
   buildLeaveKeyPickerBubble,
   buildLeavePeriodPickerBubble,
 } from "../utils/flexMessage";
@@ -70,12 +71,20 @@ export async function handlePostbackEvent(event: PostbackEvent) {
     }
 
     case "leave_period": {
-      // User selected period → ask about key
+      // User selected period → route based on type
       const leaveType2 = params.get("type")!;
       const date2 = params.get("date")!;
       const period = params.get("period")!;
-      const flex = buildLeaveKeyPickerBubble(leaveType2, date2, period);
-      await replyFlexMessage(lineClient, replyToken, flex);
+
+      if (leaveType2 === "hh") {
+        // HH flow → ask for hours
+        const flex = buildHhHoursPickerBubble(date2, period);
+        await replyFlexMessage(lineClient, replyToken, flex);
+      } else {
+        // Normal leave → ask about key
+        const flex = buildLeaveKeyPickerBubble(leaveType2, date2, period);
+        await replyFlexMessage(lineClient, replyToken, flex);
+      }
       break;
     }
 
@@ -120,6 +129,47 @@ export async function handlePostbackEvent(event: PostbackEvent) {
       };
 
       await commandDispatcher(userMetadata, "แจ้งลา", commandArr, true);
+      break;
+    }
+
+    case "hh_confirm": {
+      // HH flow — user selected hours → execute hh ใช้ command
+      const hhDate = params.get("date")!;
+      const hhPeriod = params.get("period")!;
+      const hhHours = params.get("hours")!;
+
+      const hhCommand = `hh ใช้ ${hhHours}h ${hhDate} ${hhPeriod} แจ้งลาง่าย`;
+      const hhCommandArr = hhCommand.split(" ");
+
+      const hhUserId = event.source.userId;
+      if (!hhUserId) {
+        await replyMessage(lineClient, replyToken, "⚠️ ไม่พบข้อมูลผู้ใช้");
+        break;
+      }
+
+      const hhMember = await getMemberByUid(pool, hhUserId);
+      if (!hhMember) {
+        await replyMessage(
+          lineClient,
+          replyToken,
+          "⚠️ ยังไม่ได้สมัครใช้งาน กรุณาพิมพ์ สมัคร <ชื่อ>",
+        );
+        break;
+      }
+
+      const hhGroupId =
+        event.source.type === "group" ? (event.source as any).groupId : "";
+
+      const hhUserMeta: UserMetaData = {
+        replyToken,
+        username: hhMember.name,
+        isAdmin: hhMember.is_admin,
+        chatType: event.source.type === "group" ? "GROUP" : "PERSONAL",
+        userId: hhUserId,
+        groupId: hhGroupId,
+      };
+
+      await commandDispatcher(hhUserMeta, "hh", hhCommandArr, true);
       break;
     }
 

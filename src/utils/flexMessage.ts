@@ -1312,7 +1312,7 @@ export function buildResultBubble(
 export function buildLeaveTypePickerBubble(): FlexMessage {
   const types = ["ลาพักร้อน", "ลาป่วย", "ลากิจ"];
 
-  const buttons = types.map((t) => ({
+  const leaveButtons = types.map((t) => ({
     type: "button" as const,
     style: "primary" as const,
     color: COLORS.primary,
@@ -1325,6 +1325,23 @@ export function buildLeaveTypePickerBubble(): FlexMessage {
     margin: "sm" as const,
     height: "sm" as const,
   }));
+
+  // HH button — separate color
+  const hhButton = {
+    type: "button" as const,
+    style: "primary" as const,
+    color: COLORS.hh,
+    action: {
+      type: "datetimepicker" as const,
+      label: "ใช้ HH ❤️",
+      data: "action=leave_date&type=hh",
+      mode: "date" as const,
+    },
+    margin: "sm" as const,
+    height: "sm" as const,
+  };
+
+  const buttons = [...leaveButtons, hhButton];
 
   const bubble: FlexBubble = {
     type: "bubble",
@@ -1512,6 +1529,81 @@ export function buildLeaveKeyPickerBubble(
   return {
     type: "flex",
     altText: `📅 ${leaveType} ${date} — มี Key ลาไหม?`,
+    contents: bubble,
+  };
+}
+
+export function buildHhHoursPickerBubble(
+  date: string,
+  period: string,
+): FlexMessage {
+  const hours = [
+    { label: "1h", value: "1" },
+    { label: "2h", value: "2" },
+    { label: "4h (ครึ่งวัน)", value: "4" },
+    { label: "8h (เต็มวัน)", value: "8" },
+  ];
+
+  const buttons = hours.map((h) => ({
+    type: "button" as const,
+    style: (h.value === "4" ? "primary" : "secondary") as
+      | "primary"
+      | "secondary",
+    color: h.value === "4" ? COLORS.hh : undefined,
+    action: {
+      type: "postback" as const,
+      label: `❤️ ${h.label}`,
+      data: `action=hh_confirm&date=${date}&period=${period}&hours=${h.value}`,
+    },
+    margin: "sm" as const,
+    height: "sm" as const,
+  }));
+
+  const bubble: FlexBubble = {
+    type: "bubble",
+    size: "kilo",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: "❤️ ใช้ Happy Hour",
+          weight: "bold",
+          size: "md",
+          color: "#FFFFFF",
+        },
+        {
+          type: "text",
+          text: `${date} • ${period}`,
+          size: "xs",
+          color: "#FFFFFFCC",
+        },
+      ],
+      backgroundColor: COLORS.hh,
+      paddingAll: "16px",
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: "ใช้กี่ชั่วโมง?",
+          size: "sm",
+          color: COLORS.dark,
+          weight: "bold",
+        },
+        ...buttons,
+      ],
+      paddingAll: "12px",
+      spacing: "sm",
+    },
+  };
+
+  return {
+    type: "flex",
+    altText: `❤️ ใช้ HH ${date} — เลือกจำนวนชั่วโมง`,
     contents: bubble,
   };
 }
