@@ -1387,13 +1387,25 @@ export function buildLeavePeriodPickerBubble(
   leaveType: string,
   date: string,
 ): FlexMessage {
+  const cancelBtn = {
+    type: "button" as const,
+    style: "secondary" as const,
+    action: {
+      type: "postback" as const,
+      label: "❌ ยกเลิก",
+      data: "action=leave_cancel",
+    },
+    margin: "md" as const,
+    height: "sm" as const,
+  };
+
   const periods = [
     { label: "🌞 เต็มวัน", value: "1วัน" },
     { label: "🌅 ครึ่งเช้า", value: "ครึ่งเช้า" },
     { label: "🌇 ครึ่งบ่าย", value: "ครึ่งบ่าย" },
   ];
 
-  const buttons = periods.map((p) => ({
+  const periodButtons = periods.map((p) => ({
     type: "button" as const,
     style: (p.value === "1วัน" ? "primary" : "secondary") as
       | "primary"
@@ -1408,6 +1420,20 @@ export function buildLeavePeriodPickerBubble(
     height: "sm" as const,
   }));
 
+  const multiDayBtn = {
+    type: "button" as const,
+    style: "primary" as const,
+    color: COLORS.warning,
+    action: {
+      type: "datetimepicker" as const,
+      label: "📅 หลายวัน (เลือกวันสิ้นสุด)",
+      data: `action=leave_end_date&type=${leaveType}&start=${date}`,
+      mode: "date" as const,
+    },
+    margin: "sm" as const,
+    height: "sm" as const,
+  };
+
   const bubble: FlexBubble = {
     type: "bubble",
     size: "kilo",
@@ -1417,14 +1443,14 @@ export function buildLeavePeriodPickerBubble(
       contents: [
         {
           type: "text",
-          text: `📅 ${leaveType}`,
+          text: `📅 ${leaveType === "hh" ? "ใช้ HH ❤️" : leaveType}`,
           weight: "bold",
           size: "md",
           color: "#FFFFFF",
         },
         {
           type: "text",
-          text: `วันที่: ${date}`,
+          text: `วันที่เริ่ม: ${date}`,
           size: "xs",
           color: "#FFFFFFCC",
         },
@@ -1438,12 +1464,15 @@ export function buildLeavePeriodPickerBubble(
       contents: [
         {
           type: "text",
-          text: "เลือกช่วงเวลา",
+          text: "ลาวันเดียว หรือหลายวัน?",
           size: "sm",
           color: COLORS.dark,
           weight: "bold",
         },
-        ...buttons,
+        ...periodButtons,
+        { type: "separator" as const, margin: "md" as const },
+        multiDayBtn,
+        cancelBtn,
       ],
       paddingAll: "12px",
       spacing: "sm",
@@ -1457,11 +1486,105 @@ export function buildLeavePeriodPickerBubble(
   };
 }
 
+export function buildLeaveDaysPickerBubble(
+  leaveType: string,
+  startDate: string,
+  endDate: string,
+): FlexMessage {
+  const dayOptions = ["1วัน", "2วัน", "3วัน", "4วัน", "5วัน", "6วัน", "7วัน"];
+
+  const buttons = dayOptions.map((d) => ({
+    type: "button" as const,
+    style: "secondary" as const,
+    action: {
+      type: "postback" as const,
+      label: d,
+      data: `action=leave_range_days&type=${leaveType}&date=${startDate}-${endDate}&period=${d}`,
+    },
+    margin: "xs" as const,
+    height: "sm" as const,
+  }));
+
+  const cancelBtn = {
+    type: "button" as const,
+    style: "secondary" as const,
+    action: {
+      type: "postback" as const,
+      label: "❌ ยกเลิก",
+      data: "action=leave_cancel",
+    },
+    margin: "md" as const,
+    height: "sm" as const,
+  };
+
+  const bubble: FlexBubble = {
+    type: "bubble",
+    size: "kilo",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: `📅 ${leaveType === "hh" ? "ใช้ HH ❤️" : leaveType}`,
+          weight: "bold",
+          size: "md",
+          color: "#FFFFFF",
+        },
+        {
+          type: "text",
+          text: `${startDate} ถึง ${endDate}`,
+          size: "xs",
+          color: "#FFFFFFCC",
+        },
+      ],
+      backgroundColor: COLORS.info,
+      paddingAll: "16px",
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: "ลาจริงกี่วัน? (ไม่นับเสาร์-อาทิตย์/วันหยุด)",
+          size: "sm",
+          color: COLORS.dark,
+          weight: "bold",
+          wrap: true,
+        },
+        ...buttons,
+        cancelBtn,
+      ],
+      paddingAll: "12px",
+      spacing: "none",
+    },
+  };
+
+  return {
+    type: "flex",
+    altText: `📅 ${leaveType} ${startDate}-${endDate} — ลาจริงกี่วัน?`,
+    contents: bubble,
+  };
+}
+
 export function buildLeaveKeyPickerBubble(
   leaveType: string,
   date: string,
   period: string,
 ): FlexMessage {
+  const cancelBtn = {
+    type: "button" as const,
+    style: "secondary" as const,
+    action: {
+      type: "postback" as const,
+      label: "❌ ยกเลิก",
+      data: "action=leave_cancel",
+    },
+    margin: "md" as const,
+    height: "sm" as const,
+  };
+
   const bubble: FlexBubble = {
     type: "bubble",
     size: "kilo",
@@ -1520,6 +1643,7 @@ export function buildLeaveKeyPickerBubble(
           margin: "sm" as const,
           height: "sm" as const,
         },
+        cancelBtn,
       ],
       paddingAll: "12px",
       spacing: "sm",
@@ -1543,6 +1667,18 @@ export function buildHhHoursPickerBubble(
     { label: "4h (ครึ่งวัน)", value: "4" },
     { label: "8h (เต็มวัน)", value: "8" },
   ];
+
+  const cancelBtn = {
+    type: "button" as const,
+    style: "secondary" as const,
+    action: {
+      type: "postback" as const,
+      label: "❌ ยกเลิก",
+      data: "action=leave_cancel",
+    },
+    margin: "md" as const,
+    height: "sm" as const,
+  };
 
   const buttons = hours.map((h) => ({
     type: "button" as const,
@@ -1595,6 +1731,7 @@ export function buildHhHoursPickerBubble(
           weight: "bold",
         },
         ...buttons,
+        cancelBtn,
       ],
       paddingAll: "12px",
       spacing: "sm",

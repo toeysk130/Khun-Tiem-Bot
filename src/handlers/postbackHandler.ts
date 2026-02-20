@@ -4,6 +4,7 @@ import { getMemberByUid } from "../repositories/memberRepository";
 import { UserMetaData } from "../types/interface";
 import {
   buildHhHoursPickerBubble,
+  buildLeaveDaysPickerBubble,
   buildLeaveKeyPickerBubble,
   buildLeavePeriodPickerBubble,
 } from "../utils/flexMessage";
@@ -54,6 +55,10 @@ export async function handlePostbackEvent(event: PostbackEvent) {
       await replyMessage(lineClient, replyToken, "❌ ยกเลิกการลบเรียบร้อย");
       break;
 
+    case "leave_cancel":
+      await replyMessage(lineClient, replyToken, "❌ ยกเลิกการแจ้งลาเรียบร้อย");
+      break;
+
     // ── Date Picker Flow ──
 
     case "leave_date": {
@@ -66,6 +71,25 @@ export async function handlePostbackEvent(event: PostbackEvent) {
       }
       const dateStr = isoToLeaveDate(isoDate);
       const flex = buildLeavePeriodPickerBubble(leaveType, dateStr);
+      await replyFlexMessage(lineClient, replyToken, flex);
+      break;
+    }
+
+    case "leave_end_date": {
+      // User picked end date for multi-day leave
+      const leaveTypeEnd = params.get("type")!;
+      const startDate = params.get("start")!;
+      const isoEndDate = (event.postback.params as { date?: string })?.date;
+      if (!isoEndDate) {
+        await replyMessage(lineClient, replyToken, "⚠️ ไม่ได้เลือกวันสิ้นสุด");
+        break;
+      }
+      const endDateStr = isoToLeaveDate(isoEndDate);
+      const flex = buildLeaveDaysPickerBubble(
+        leaveTypeEnd,
+        startDate,
+        endDateStr,
+      );
       await replyFlexMessage(lineClient, replyToken, flex);
       break;
     }
@@ -83,6 +107,26 @@ export async function handlePostbackEvent(event: PostbackEvent) {
       } else {
         // Normal leave → ask about key
         const flex = buildLeaveKeyPickerBubble(leaveType2, date2, period);
+        await replyFlexMessage(lineClient, replyToken, flex);
+      }
+      break;
+    }
+
+    case "leave_range_days": {
+      // Multi-day leave — user selected number of actual days
+      const rangeType = params.get("type")!;
+      const rangeDate = params.get("date")!; // e.g. "20FEB26-24FEB26"
+      const rangePeriod = params.get("period")!; // e.g. "3วัน"
+
+      if (rangeType === "hh") {
+        const flex = buildHhHoursPickerBubble(rangeDate, rangePeriod);
+        await replyFlexMessage(lineClient, replyToken, flex);
+      } else {
+        const flex = buildLeaveKeyPickerBubble(
+          rangeType,
+          rangeDate,
+          rangePeriod,
+        );
         await replyFlexMessage(lineClient, replyToken, flex);
       }
       break;
