@@ -15,6 +15,7 @@ import {
   handleLeaveRequest,
   handleNcLeaveRequest,
 } from "./commands/leaveRequest";
+import { handleModeCommand } from "./commands/modeCommand";
 import { handleRegisterCommand } from "./commands/registerMember";
 import {
   handleOtherReport,
@@ -39,6 +40,7 @@ const QUIET_COMMANDS = [
   "รายการ",
   "แอบดู",
   "เตือน",
+  "โหมด",
 ];
 
 // Commands that must be used in Group Chat only
@@ -134,6 +136,9 @@ export async function commandDispatcher(
         break;
       case "ลบสมาชิก":
         await handleDeleteMemberCommand(commandArr, userMetadata);
+        break;
+      case "โหมด":
+        await handleModeCommand(commandArr, userMetadata);
         break;
       default:
         wasSuccessful = false;
