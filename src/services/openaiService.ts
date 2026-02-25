@@ -118,7 +118,7 @@ async function callOpenAI(
     const response = await axios.post(
       OPENROUTER_URL,
       {
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage },
@@ -308,7 +308,7 @@ export async function parseNaturalLanguageCommand(
     const response = await axios.post(
       OPENROUTER_URL,
       {
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3-flash-preview",
         messages,
         max_tokens: 200,
         temperature: 0.3,
