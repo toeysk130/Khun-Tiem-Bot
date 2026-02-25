@@ -294,7 +294,7 @@ export async function handleConversation(
       await replyMessage(
         lineClient,
         userMetadata.replyToken,
-        `🤖 ขอโทษค่ะ ข้อมูลยังไม่ครบ: ${validationError}\nช่วยบอกรายละเอียดเพิ่มได้ไหมคะ?`,
+        `🤖 ขอโทษที ข้อมูลยังไม่ครบ: ${validationError}\nช่วยบอกรายละเอียดเพิ่มหน่อยนะเพื่อน`,
       );
       return;
     }
