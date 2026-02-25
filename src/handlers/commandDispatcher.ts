@@ -91,18 +91,7 @@ export async function commandDispatcher(
   commandArr: string[],
   skipAIComment: boolean = false,
 ) {
-  // Block leave commands in personal chat (admin can bypass)
-  if (
-    GROUP_ONLY_COMMANDS.includes(command) &&
-    userMetadata.chatType !== "GROUP" &&
-    !userMetadata.isAdmin
-  ) {
-    return replyMessage(
-      lineClient,
-      userMetadata.replyToken,
-      "📢 การแจ้งลาต้องทำในห้อง Group Chat เท่านั้นนะคะ เพื่อให้ทุกคนในทีมเห็น!",
-    );
-  }
+  // Allowed everywhere now
 
   const skipAI =
     skipAIComment ||

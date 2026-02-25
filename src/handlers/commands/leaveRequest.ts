@@ -1,5 +1,6 @@
 import { pool } from "../../configs/database";
 import { lineClient } from "../../configs/lineClient";
+import { pushFlexMessage } from "../../cron/pushMessage";
 import {
   addNewLeaveRequest,
   addNewNcLeaveRequest,
@@ -18,6 +19,11 @@ export async function handleLeaveRequest(
   try {
     const flexMsg = await addNewLeaveRequest(pool, userMetaData, commandArr);
     await replyFlexMessage(lineClient, userMetaData.replyToken, flexMsg);
+
+    // Forward to group if requested from personal chat
+    if (userMetaData.chatType !== "GROUP") {
+      await pushFlexMessage(flexMsg);
+    }
   } catch (error) {
     console.error("Error adding leave request:", error);
     await replyMessage(
@@ -38,6 +44,11 @@ export async function handleNcLeaveRequest(
   try {
     const flexMsg = await addNewNcLeaveRequest(pool, userMetaData, commandArr);
     await replyFlexMessage(lineClient, userMetaData.replyToken, flexMsg);
+
+    // Forward to group if requested from personal chat
+    if (userMetaData.chatType !== "GROUP") {
+      await pushFlexMessage(flexMsg);
+    }
   } catch (error) {
     console.error("Error adding NC leave request:", error);
     await replyMessage(

@@ -225,21 +225,7 @@ export async function handleConversation(
     return;
   }
 
-  // Block leave-related intents in personal chat (admin can bypass)
-  const leaveIntents = ["แจ้งลา", "nc", "hh"];
-  if (
-    leaveIntents.includes(result.intent) &&
-    userMetadata.chatType !== "GROUP" &&
-    !userMetadata.isAdmin
-  ) {
-    sessions.delete(userId);
-    await replyMessage(
-      lineClient,
-      userMetadata.replyToken,
-      "📢 การแจ้งลาต้องทำในห้อง Group Chat เท่านั้นนะคะ เพื่อให้ทุกคนในทีมเห็น!",
-    );
-    return;
-  }
+  // Allowed everywhere now
 
   // GPT has a question (missing info)
   if (!result.command && result.question) {

@@ -4,6 +4,7 @@ import {
   checkIfHhIdExist,
   getNotApproveHHLists,
 } from "../../repositories/happyHour";
+import { pushFlexMessage } from "../../cron/pushMessage";
 import { addHhRecord, updateHhApproveFlag } from "../../services/hhService";
 import { addNewHhLeaveRequest } from "../../services/leaveService";
 import { enhanceErrorWithAI } from "../../services/openaiService";
@@ -104,14 +105,7 @@ async function handleUseHhRequest(
   userMetaData: UserMetaData,
   replyToken: string,
 ) {
-  // hh ใช้ creates a leave entry — must be in group chat (admin can bypass)
-  if (userMetaData.chatType !== "GROUP" && !userMetaData.isAdmin) {
-    return replyMessage(
-      lineClient,
-      replyToken,
-      "📢 การใช้ HH ต้องทำในห้อง Group Chat เท่านั้นนะคะ เพื่อให้ทุกคนในทีมเห็น!",
-    );
-  }
+  // Allowed everywhere now
 
   const isValidRequest = await validateHhRequest(userMetaData, commandArr);
   if (!isValidRequest) return;
@@ -123,6 +117,10 @@ async function handleUseHhRequest(
       commandArr,
     );
     await replyFlexMessage(lineClient, replyToken, flexMsg);
+
+    if (userMetaData.chatType !== "GROUP") {
+      await pushFlexMessage(flexMsg);
+    }
   } catch (error) {
     console.error("Error processing HH request:", error);
     await replyMessage(

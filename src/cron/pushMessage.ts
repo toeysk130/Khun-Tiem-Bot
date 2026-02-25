@@ -162,3 +162,13 @@ export async function pushSingleMessage(message: string, to?: string) {
     .then((response) => console.log("Message sent:", response.data))
     .catch((error) => console.error("Error sending message:", error));
 }
+
+export async function pushFlexMessage(flexMessage: any, to?: string) {
+  const targetId = to || process.env.GROUP_ID || "";
+  const axiosInstance = createAxiosInstance();
+
+  axiosInstance
+    .post("", { to: targetId, messages: [flexMessage] })
+    .then((response) => console.log("Flex Message pushed:", response.data))
+    .catch((error) => console.error("Error pushing flex message:", error));
+}
