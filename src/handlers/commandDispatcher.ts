@@ -123,10 +123,12 @@ export async function commandDispatcher(
         await handleRegisterCommand(userMetadata);
         break;
       case "แจ้งลา":
-        await handleLeaveRequest(commandArr, userMetadata);
+        wasSuccessful =
+          (await handleLeaveRequest(commandArr, userMetadata)) !== false;
         break;
       case "nc":
-        await handleNcLeaveRequest(commandArr, userMetadata);
+        wasSuccessful =
+          (await handleNcLeaveRequest(commandArr, userMetadata)) !== false;
         break;
       case "ตาราง":
         await handleShowTableCommand(commandArr, userMetadata.replyToken);
@@ -145,7 +147,8 @@ export async function commandDispatcher(
         await handleWarningReport(userMetadata);
         break;
       case "hh":
-        await handleHhCommand(commandArr, userMetadata);
+        wasSuccessful =
+          (await handleHhCommand(commandArr, userMetadata)) !== false;
         break;
       case "อัปเดต":
         await handleUpdateRequest(commandArr, userMetadata);

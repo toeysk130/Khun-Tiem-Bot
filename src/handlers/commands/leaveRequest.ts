@@ -12,9 +12,9 @@ import { validateLeaveRequest } from "../../validations/validateLeaveReq";
 export async function handleLeaveRequest(
   commandArr: string[],
   userMetaData: UserMetaData,
-) {
+): Promise<boolean> {
   const isValidRequest = await validateLeaveRequest(userMetaData, commandArr);
-  if (!isValidRequest) return;
+  if (!isValidRequest) return false;
 
   try {
     const flexMsg = await addNewLeaveRequest(pool, userMetaData, commandArr);
@@ -24,6 +24,7 @@ export async function handleLeaveRequest(
     if (userMetaData.chatType !== "GROUP") {
       await pushFlexMessage(flexMsg);
     }
+    return true;
   } catch (error) {
     console.error("Error adding leave request:", error);
     await replyMessage(
@@ -31,15 +32,16 @@ export async function handleLeaveRequest(
       userMetaData.replyToken,
       "😥 เกิดข้อผิดพลาดขณะแจ้งลา กรุณาลองใหม่",
     );
+    return false;
   }
 }
 
 export async function handleNcLeaveRequest(
   commandArr: string[],
   userMetaData: UserMetaData,
-) {
+): Promise<boolean> {
   const isValidRequest = await validateLeaveRequest(userMetaData, commandArr);
-  if (!isValidRequest) return;
+  if (!isValidRequest) return false;
 
   try {
     const flexMsg = await addNewNcLeaveRequest(pool, userMetaData, commandArr);
@@ -49,6 +51,7 @@ export async function handleNcLeaveRequest(
     if (userMetaData.chatType !== "GROUP") {
       await pushFlexMessage(flexMsg);
     }
+    return true;
   } catch (error) {
     console.error("Error adding NC leave request:", error);
     await replyMessage(
@@ -56,5 +59,6 @@ export async function handleNcLeaveRequest(
       userMetaData.replyToken,
       "😥 เกิดข้อผิดพลาดขณะแจ้งลา กรุณาลองใหม่",
     );
+    return false;
   }
 }

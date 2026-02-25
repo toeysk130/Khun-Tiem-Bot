@@ -23,25 +23,27 @@ export async function validateInputDate(
 ): Promise<boolean> {
   // Validate leave amount
   if (!validLeaveAmounts.includes(leaveAmount)) {
-    await replyMessage(
-      lineClient,
-      userMetaData.replyToken,
-      `⚠️ จำนวนวันลา '${leaveAmount}' ไม่มีในระบบ\n✅ ตัวเลือกที่มี ${validLeaveAmounts.join(
-        " ",
-      )}`,
+    const baseError = `⚠️ จำนวนวันลา '${leaveAmount}' ไม่มีในระบบ\n✅ ตัวเลือกที่มี ${validLeaveAmounts.join(
+      " ",
+    )}`;
+    const enhanced = await enhanceErrorWithAI(
+      `${leaveType} ${leaveDatePeriod} ${leaveAmount}`,
+      baseError,
     );
+    await replyMessage(lineClient, userMetaData.replyToken, enhanced);
     return false;
   }
 
   // Validate leave key status
   if (!validKeyStatus.includes(leaveKey)) {
-    await replyMessage(
-      lineClient,
-      userMetaData.replyToken,
-      `⚠️ ประเภทการคีย์ '${leaveKey}' ไม่มีในระบบ\n✅ ตัวเลือกที่มี ${validKeyStatus.join(
-        " ",
-      )}`,
+    const baseError = `⚠️ ประเภทการคีย์ '${leaveKey}' ไม่มีในระบบ\n✅ ตัวเลือกที่มี ${validKeyStatus.join(
+      " ",
+    )}`;
+    const enhanced = await enhanceErrorWithAI(
+      `${leaveType} ${leaveDatePeriod} ${leaveAmount} ${leaveKey}`,
+      baseError,
     );
+    await replyMessage(lineClient, userMetaData.replyToken, enhanced);
     return false;
   }
 
@@ -72,12 +74,13 @@ export async function validateInputDate(
     }
 
     if (!["1วัน", "ครึ่งเช้า", "ครึ่งบ่าย"].includes(leaveAmount)) {
-      await replyMessage(
-        lineClient,
-        userMetaData.replyToken,
-        `⚠️ จำนวนวันลา '${leaveAmount}' ไม่ถูกต้อง\
-        \n ตัวเลือก "1วัน", "ครึ่งเช้า", "ครึ่งบ่าย"`,
+      const baseError = `⚠️ จำนวนวันลา '${leaveAmount}' ไม่ถูกต้อง\
+      \n ตัวเลือก "1วัน", "ครึ่งเช้า", "ครึ่งบ่าย"`;
+      const enhanced = await enhanceErrorWithAI(
+        `${leaveType} ${leaveDatePeriod} ${leaveAmount}`,
+        baseError,
       );
+      await replyMessage(lineClient, userMetaData.replyToken, enhanced);
       return false;
     }
 
@@ -106,20 +109,22 @@ export async function validateInputDate(
   // Validate range date format (e.g., "01JAN24-03JAN24")
   if (leaveDatePeriod.length === LONG_LEAVE_DATE_LEN) {
     if (!isValidDateRange(leaveDatePeriod)) {
-      await replyMessage(
-        lineClient,
-        userMetaData.replyToken,
-        `⚠️ วันลา '${leaveDatePeriod}' ระบุไม่ถูกต้อง\n✅ ตัวอย่างที่ถูก เช่น 09JAN-13JAN`,
+      const baseError = `⚠️ วันลา '${leaveDatePeriod}' ระบุไม่ถูกต้อง\n✅ ตัวอย่างที่ถูก เช่น 09JAN-13JAN`;
+      const enhanced = await enhanceErrorWithAI(
+        `${leaveType} ${leaveDatePeriod} ${leaveAmount}`,
+        baseError,
       );
+      await replyMessage(lineClient, userMetaData.replyToken, enhanced);
       return false;
     }
 
     if (["1วัน", "ครึ่งเช้า", "ครึ่งบ่าย"].includes(leaveAmount)) {
-      await replyMessage(
-        lineClient,
-        userMetaData.replyToken,
-        `⚠️ จำนวนวันลา '${leaveAmount}' ไม่ถูกต้อง`,
+      const baseError = `⚠️ จำนวนวันลา '${leaveAmount}' ไม่ถูกต้องสำหรับช่วงวัน`;
+      const enhanced = await enhanceErrorWithAI(
+        `${leaveType} ${leaveDatePeriod} ${leaveAmount}`,
+        baseError,
       );
+      await replyMessage(lineClient, userMetaData.replyToken, enhanced);
       return false;
     }
 
@@ -128,11 +133,12 @@ export async function validateInputDate(
     const secondDate = parseDate(endDate);
 
     if (secondDate < firstDate) {
-      await replyMessage(
-        lineClient,
-        userMetaData.replyToken,
-        `⚠️ วันที่สิ้นสุด ${endDate} มีค่าน้อยกว่าวันที่เริ่มต้น ${startDate}`,
+      const baseError = `⚠️ วันที่สิ้นสุด ${endDate} มีค่าน้อยกว่าวันที่เริ่มต้น ${startDate}`;
+      const enhanced = await enhanceErrorWithAI(
+        `${leaveType} ${leaveDatePeriod} ${leaveAmount}`,
+        baseError,
       );
+      await replyMessage(lineClient, userMetaData.replyToken, enhanced);
       return false;
     }
   }
