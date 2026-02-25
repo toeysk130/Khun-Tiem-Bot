@@ -1,8 +1,5 @@
 import { pool } from "../configs/database";
-import {
-  buildWeeklyReport,
-  buildWeeklyReportData,
-} from "../handlers/commands/reportRequest";
+import { buildWeeklyReportData } from "../handlers/commands/reportRequest";
 import { getNotApproveHHLists } from "../repositories/happyHour";
 import {
   getAllWaitingApproval,
@@ -31,40 +28,32 @@ function createAxiosInstance() {
 export async function pushWeeklyMessage() {
   const GROUP_ID = process.env.GROUP_ID || "";
   const axiosInstance = createAxiosInstance();
+  const pushMessages: any[] = [];
 
   // 1. Weekly leave report
-  const leaveListThisWeeks = await buildWeeklyReport("วีคนี้");
-  await axiosInstance
-    .post("", {
-      to: GROUP_ID,
-      messages: [{ type: "text", text: leaveListThisWeeks }],
-    })
-    .then((response) => console.log("Weekly report sent:", response.data))
-    .catch((error) => console.error("Error sending weekly report:", error));
+  const { textMsg, leaveCount } = await buildWeeklyReportData("วีคนี้");
+  if (leaveCount > 0) {
+    pushMessages.push({ type: "text", text: textMsg });
+  }
 
   // 2. Wait approve list
   const waitingLeaves = await getAllWaitingApproval(pool);
-  const waitApproveMsg =
-    "✏️ รายการที่รอการ Approve\n\n" +
-    waitingLeaves
-      .map(
-        (detail) =>
-          `${getColorEmoji(detail.is_approve, detail.status)}<${detail.id}> ${
-            detail.member
-          } ${detail.leave_type} ${getDisplayLeaveDate(
-            detail.leave_start_dt,
-            detail.leave_end_dt,
-          )} ${detail.period_detail} ${detail.status}`,
-      )
-      .join("\n");
-
-  await axiosInstance
-    .post("", {
-      to: GROUP_ID,
-      messages: [{ type: "text", text: waitApproveMsg }],
-    })
-    .then((response) => console.log("Wait approve list sent:", response.data))
-    .catch((error) => console.error("Error sending wait approve list:", error));
+  if (waitingLeaves.length > 0) {
+    const waitApproveMsg =
+      "✏️ รายการที่รอการ Approve\n\n" +
+      waitingLeaves
+        .map(
+          (detail) =>
+            `${getColorEmoji(detail.is_approve, detail.status)}<${detail.id}> ${
+              detail.member
+            } ${detail.leave_type} ${getDisplayLeaveDate(
+              detail.leave_start_dt,
+              detail.leave_end_dt,
+            )} ${detail.period_detail} ${detail.status}`,
+        )
+        .join("\n");
+    pushMessages.push({ type: "text", text: waitApproveMsg });
+  }
 
   // 3. HH wait approve
   const notApproveHHLists = await getNotApproveHHLists(pool);
@@ -80,13 +69,21 @@ export async function pushWeeklyMessage() {
         )
         .join("\n");
 
+    pushMessages.push({ type: "text", text: waitApproveHh });
+  }
+
+  if (pushMessages.length > 0) {
     await axiosInstance
       .post("", {
         to: GROUP_ID,
-        messages: [{ type: "text", text: waitApproveHh }],
+        messages: pushMessages,
       })
-      .then((response) => console.log("HH wait approve sent:", response.data))
-      .catch((error) => console.error("Error sending HH wait approve:", error));
+      .then((response) => console.log("Weekly report sent:", response.data))
+      .catch((error) => console.error("Error sending weekly report:", error));
+  } else {
+    console.log(
+      "No messages to push for weekly report (no leaves, no wait approve).",
+    );
   }
 }
 
@@ -95,13 +92,17 @@ export async function pushNextWeekReport() {
   const axiosInstance = createAxiosInstance();
 
   try {
-    const { flexMsg } = await buildWeeklyReportData("วีคหน้า");
+    const { flexMsg, leaveCount } = await buildWeeklyReportData("วีคหน้า");
 
-    await axiosInstance.post("", {
-      to: GROUP_ID,
-      messages: [flexMsg],
-    });
-    console.log("Next week report sent successfully.");
+    if (leaveCount > 0) {
+      await axiosInstance.post("", {
+        to: GROUP_ID,
+        messages: [flexMsg],
+      });
+      console.log("Next week report sent successfully.");
+    } else {
+      console.log("No next week leaves, skipping push.");
+    }
   } catch (error) {
     console.error("Error sending next week report:", error);
   }
@@ -129,16 +130,8 @@ export async function pushReminderMessage() {
   const aiGreeting = await generateDailyGreeting(leaveContext);
 
   if (leavesTomorrow.length === 0) {
-    // No one on leave — just send fun AI message
-    if (aiGreeting) {
-      await axiosInstance
-        .post("", {
-          to: GROUP_ID,
-          messages: [{ type: "text", text: `🤖 ขุนเทียมบอก:\n${aiGreeting}` }],
-        })
-        .then((r) => console.log("AI greeting sent:", r.data))
-        .catch((e) => console.error("Error sending AI greeting:", e));
-    }
+    // No one on leave — just skip sending to save push messages
+    console.log("No leaves tomorrow, skipping reminder and AI greeting.");
     return;
   }
 
