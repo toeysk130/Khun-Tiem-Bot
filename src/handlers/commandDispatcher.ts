@@ -46,6 +46,7 @@ const QUIET_COMMANDS = [
   "แอบดู",
   "เตือน",
   "โหมด",
+  "แจ้งลาง่าย",
 ];
 
 // Commands that must be used in Group Chat only
@@ -176,8 +177,16 @@ export async function commandDispatcher(
         await handleVisualWeekReport(userMetadata.replyToken);
         break;
       case "แจ้งลาง่าย": {
-        const flex = buildLeaveTypePickerBubble();
-        await replyFlexMessage(lineClient, userMetadata.replyToken, flex);
+        if (userMetadata.chatType === "GROUP") {
+          await replyMessage(
+            lineClient,
+            userMetadata.replyToken,
+            "⚠️ การใช้งาน 'แจ้งลาง่าย' ในกลุ่มเปลือง Push Token\nกรุณาไปใช้คำสั่งนี้ในห้องแชทส่วนตัว (DM) ของขุนเทียมแทนนะครับ 🙏",
+          );
+        } else {
+          const flex = buildLeaveTypePickerBubble();
+          await replyFlexMessage(lineClient, userMetadata.replyToken, flex);
+        }
         break;
       }
       default:
