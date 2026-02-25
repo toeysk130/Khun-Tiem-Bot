@@ -1,7 +1,7 @@
 import axios from "axios";
 
-const OPENAI_API_KEY = process.env.CHAT_GPT_API;
-const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 // ── AI Personality Modes ──
 
@@ -72,9 +72,9 @@ async function callOpenAI(
 ): Promise<string | null> {
   try {
     const response = await axios.post(
-      OPENAI_URL,
+      OPENROUTER_URL,
       {
-        model: "gpt-4o-mini",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage },
@@ -84,8 +84,10 @@ async function callOpenAI(
       },
       {
         headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
           "Content-Type": "application/json",
+          "HTTP-Referer": "http://localhost:3000",
+          "X-Title": "Khun-Tiem-Bot",
         },
       },
     );
@@ -260,9 +262,9 @@ export async function parseNaturalLanguageCommand(
     ];
 
     const response = await axios.post(
-      OPENAI_URL,
+      OPENROUTER_URL,
       {
-        model: "gpt-4o-mini",
+        model: "google/gemini-2.5-flash",
         messages,
         max_tokens: 200,
         temperature: 0.3,
@@ -270,16 +272,21 @@ export async function parseNaturalLanguageCommand(
       },
       {
         headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
           "Content-Type": "application/json",
+          "HTTP-Referer": "http://localhost:3000",
+          "X-Title": "Khun-Tiem-Bot",
         },
       },
     );
-
     const content = response.data?.choices?.[0]?.message?.content;
     if (!content) return null;
 
-    const parsed = JSON.parse(content) as ParsedCommand;
+    const cleanedContent = content
+      .replace(/```json/gi, "")
+      .replace(/```/g, "")
+      .trim();
+    const parsed = JSON.parse(cleanedContent) as ParsedCommand;
     return parsed;
   } catch (error: any) {
     console.error(
