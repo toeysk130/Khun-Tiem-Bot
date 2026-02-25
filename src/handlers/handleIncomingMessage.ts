@@ -82,17 +82,6 @@ export async function handleIncomingMessage(
     return;
   }
 
-  // ── 4. Unrecognized message from registered member → AI fallback ──
-  // The bot will try to understand what the user wants and suggest the correct command
-  const member = await getMemberByUid(pool, userMetadata.userId);
-  if (!member) return; // ignore messages from unregistered users
-
-  userMetadata.username = member.name;
-  userMetadata.isAdmin = member.is_admin;
-  userMetadata.replyToken = replyToken;
-
-  const aiReply = await chatWithAI(
-    `ผู้ใช้ "${userMetadata.username}" พิมพ์ว่า: "${receivedText}"\nช่วยดูว่าเขาพยายามทำอะไร ถ้าเกี่ยวกับคำสั่งของ Bot ให้แนะนำคำสั่งที่ถูกต้อง ถ้าไม่เกี่ยวก็ตอบตามปกติ`,
-  );
-  await replyMessage(lineClient, replyToken, `🤖 ${aiReply}`);
+  // ── 4. Unrecognized message from registered member ──
+  // Do nothing to save tokens if it's not a command and not prefixed with "ขุนเทียม"
 }
