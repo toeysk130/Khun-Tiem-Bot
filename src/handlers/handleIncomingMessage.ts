@@ -42,10 +42,14 @@ export async function handleIncomingMessage(
 
   // Check if user quoted an old message
   let quotedText: string | null = null;
+  let isReplyingToBot = false;
   if (textMessage.quotedMessageId) {
     const quotedMsg = await getChatMessageById(textMessage.quotedMessageId);
     if (quotedMsg && quotedMsg.textContent) {
       quotedText = quotedMsg.textContent;
+      if (quotedMsg.senderRole === "bot") {
+        isReplyingToBot = true;
+      }
     }
   }
 
@@ -67,9 +71,9 @@ export async function handleIncomingMessage(
     return;
   }
 
-  // ── 2. "ขุนเทียม" prefix → AI conversation ──
-  // Supports: "ขุนเทียม ข้อความ", "ขุนเทียม...ข้อความ", and "ขุนเทียม" alone
-  if (receivedText.startsWith("ขุนเทียม")) {
+  // ── 2. "ขุนเทียม" prefix or replying directly to bot → AI conversation ──
+  // Supports: "ขุนเทียม ข้อความ", "ขุนเทียม...ข้อความ", "ขุนเทียม" alone, or just replying to bot
+  if (receivedText.startsWith("ขุนเทียม") || isReplyingToBot) {
     const member = await getMemberByUid(pool, userMetadata.userId);
     if (!member) return;
     userMetadata.username = member.name;
@@ -77,7 +81,10 @@ export async function handleIncomingMessage(
     userMetadata.replyToken = replyToken;
 
     // Strip "ขุนเทียม" prefix and any leading whitespace/punctuation
-    const afterPrefix = receivedText.slice("ขุนเทียม".length).trim();
+    const afterPrefix = receivedText.startsWith("ขุนเทียม")
+      ? receivedText.slice("ขุนเทียม".length).trim()
+      : receivedText;
+
     if (afterPrefix.length > 0) {
       await handleConversation(
         userMetadata.userId,
