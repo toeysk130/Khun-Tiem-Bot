@@ -62,7 +62,7 @@ export async function handlePostbackEvent(event: PostbackEvent) {
         await replyMessage(
           lineClient,
           replyToken,
-          "❌ ยกเลิกการแจ้งลาเรียบร้อย",
+          "❌ ปิดเมนูแจ้งลา\n(หากระบบแจ้งว่าทำรายการสำเร็จแล้ว ปุ่มนี้จะไม่สามารถยกเลิกการลาได้ กรุณาใช้คำสั่ง 'ลบ <id>' แทนครับ)",
         );
       }
       break;
