@@ -56,7 +56,10 @@ export async function addNewLeaveRequest(
   return buildResultBubble("success", `แจ้งลาสำเร็จ`, [
     { label: "👤 ชื่อ", value: userMetaData.username },
     { label: "📄 ประเภท", value: leaveType },
-    { label: "📅 วันที่", value: leaveStartDate.toUpperCase() },
+    {
+      label: "📅 วันที่",
+      value: `${leaveStartDate.toUpperCase()} (${leaveAmount})`,
+    },
     { label: "⏰ จำนวน", value: leaveAmount },
     { label: "🔑 Key", value: leaveKey },
     ...(description ? [{ label: "📝 เหตุผล", value: description }] : []),
@@ -96,7 +99,10 @@ export async function addNewNcLeaveRequest(
   return buildResultBubble("success", `แจ้งลาสำเร็จ (NC)`, [
     { label: "👤 ชื่อ", value: userMetaData.username },
     { label: "📄 ประเภท", value: leaveType },
-    { label: "📅 วันที่", value: leaveStartDate.toUpperCase() },
+    {
+      label: "📅 วันที่",
+      value: `${leaveStartDate.toUpperCase()} (${leaveAmount})`,
+    },
     { label: "⏰ จำนวน", value: leaveAmount },
     ...(description ? [{ label: "📝 เหตุผล", value: description }] : []),
   ]);
@@ -135,9 +141,14 @@ export async function addNewHhLeaveRequest(
   await delHhRecord(pool, username, parseInt(hhAmt), description);
 
   const remaining = await getRemainingHh(pool, username);
+  const hhHours = hhAmt.toLowerCase().endsWith("h") ? hhAmt : `${hhAmt}h`;
+
   return buildResultBubble("hh", `ใช้ HH สำหรับ ${username}`, [
-    { label: "⏰ ใช้", value: `${hhAmt}h` },
-    { label: "📅 วันที่", value: leaveStartDate.toUpperCase() },
+    { label: "⏰ ใช้", value: hhHours },
+    {
+      label: "📅 วันที่",
+      value: `${leaveStartDate.toUpperCase()} (${leaveAmount} ${hhHours})`,
+    },
     { label: "❤️ คงเหลือ", value: `${remaining}h`, color: "#27AE60" },
     ...(description ? [{ label: "📝 เหตุผล", value: description }] : []),
   ]);
