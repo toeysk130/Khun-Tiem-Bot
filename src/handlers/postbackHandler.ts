@@ -52,11 +52,19 @@ export async function handlePostbackEvent(event: PostbackEvent) {
       break;
 
     case "cancel_delete":
-      await replyMessage(lineClient, replyToken, "❌ ยกเลิกการลบเรียบร้อย");
+      if (event.source.type !== "group") {
+        await replyMessage(lineClient, replyToken, "❌ ยกเลิกการลบเรียบร้อย");
+      }
       break;
 
     case "leave_cancel":
-      await replyMessage(lineClient, replyToken, "❌ ยกเลิกการแจ้งลาเรียบร้อย");
+      if (event.source.type !== "group") {
+        await replyMessage(
+          lineClient,
+          replyToken,
+          "❌ ยกเลิกการแจ้งลาเรียบร้อย",
+        );
+      }
       break;
 
     // ── Date Picker Flow ──
