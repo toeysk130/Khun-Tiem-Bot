@@ -11,6 +11,10 @@ import { UserMetaData } from "../types/interface";
 import { replyMessage } from "../utils/sendLineMsg";
 import { commandDispatcher } from "./commandDispatcher";
 import { TextEventMessage, WebhookEvent } from "@line/bot-sdk";
+import {
+  saveChatMessage,
+  getChatMessageById,
+} from "../repositories/chatMessageRepository";
 
 export { pool, lineClient };
 
@@ -27,6 +31,24 @@ export async function handleIncomingMessage(
   const commandArr = receivedText.split(" ");
   const command = commandArr[0];
 
+  // 0. Save incoming message to DB
+  await saveChatMessage({
+    lineUserId: userMetadata.userId,
+    messageId: textMessage.id,
+    quoteToken: textMessage.quoteToken || null,
+    textContent: receivedText,
+    senderRole: "user",
+  });
+
+  // Check if user quoted an old message
+  let quotedText: string | null = null;
+  if (textMessage.quotedMessageId) {
+    const quotedMsg = await getChatMessageById(textMessage.quotedMessageId);
+    if (quotedMsg && quotedMsg.textContent) {
+      quotedText = quotedMsg.textContent;
+    }
+  }
+
   // ── 1. Active conversation session → continue AI chat ──
   if (hasActiveSession(userMetadata.userId)) {
     userMetadata.replyToken = replyToken;
@@ -35,7 +57,13 @@ export async function handleIncomingMessage(
       userMetadata.username = member.name;
       userMetadata.isAdmin = member.is_admin;
     }
-    await handleConversation(userMetadata.userId, receivedText, userMetadata);
+    await handleConversation(
+      userMetadata.userId,
+      receivedText,
+      userMetadata,
+      quotedText,
+      textMessage.quoteToken,
+    );
     return;
   }
 
@@ -51,13 +79,27 @@ export async function handleIncomingMessage(
     // Strip "ขุนเทียม" prefix and any leading whitespace/punctuation
     const afterPrefix = receivedText.slice("ขุนเทียม".length).trim();
     if (afterPrefix.length > 0) {
-      await handleConversation(userMetadata.userId, afterPrefix, userMetadata);
+      await handleConversation(
+        userMetadata.userId,
+        afterPrefix,
+        userMetadata,
+        quotedText,
+        textMessage.quoteToken,
+      );
     } else {
       // Just "ขุนเทียม" alone — greet
-      const greeting = await chatWithAI(
-        "ผู้ใช้เรียกชื่อคุณ ช่วยทักทายและบอกว่าสามารถช่วยอะไรได้บ้าง",
+      let prompt =
+        "ผู้ใช้เรียกชื่อคุณ ช่วยทักทายและบอกว่าสามารถช่วยอะไรได้บ้าง";
+      if (quotedText)
+        prompt += `\n(ผู้ใช้ได้ตอบกลับข้อความเดิมของคุณว่า: "${quotedText}")`;
+
+      const greeting = await chatWithAI(prompt);
+      await replyMessage(
+        lineClient,
+        replyToken,
+        `🤖 ${greeting}`,
+        textMessage.quoteToken,
       );
-      await replyMessage(lineClient, replyToken, `🤖 ${greeting}`);
     }
     return;
   }

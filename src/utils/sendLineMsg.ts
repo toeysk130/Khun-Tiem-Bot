@@ -18,7 +18,11 @@ export async function flushReplyBuffer(
   replyBuffers.delete(replyToken);
   const all = [...buffered, ...extraMessages].slice(0, 5); // LINE limit
   if (all.length > 0) {
-    await client.replyMessage(replyToken, all);
+    const res = await client.replyMessage(replyToken, all);
+    // Log outbound messages
+    if (res && (res as any).sentMessages) {
+      await logSentMessages(all, (res as any).sentMessages);
+    }
   }
 }
 
@@ -26,13 +30,23 @@ export async function replyMessage(
   client: Client,
   replyToken: string,
   msg: string,
+  quoteToken?: string,
 ) {
-  const message: Message = { type: "text", text: msg };
+  const message: Message & { quoteToken?: string } = {
+    type: "text",
+    text: msg,
+  };
+  if (quoteToken) {
+    message.quoteToken = quoteToken;
+  }
   if (replyBuffers.has(replyToken)) {
     replyBuffers.get(replyToken)!.push(message);
     return;
   }
-  await client.replyMessage(replyToken, message);
+  const res = await client.replyMessage(replyToken, message);
+  if (res && (res as any).sentMessages) {
+    await logSentMessages([message], (res as any).sentMessages);
+  }
 }
 
 export async function replyFlexMessage(
@@ -44,7 +58,10 @@ export async function replyFlexMessage(
     replyBuffers.get(replyToken)!.push(flexMessage);
     return;
   }
-  await client.replyMessage(replyToken, flexMessage);
+  const res = await client.replyMessage(replyToken, flexMessage);
+  if (res && (res as any).sentMessages) {
+    await logSentMessages([flexMessage], (res as any).sentMessages);
+  }
 }
 
 export async function replyMessages(
@@ -56,7 +73,48 @@ export async function replyMessages(
     replyBuffers.get(replyToken)!.push(...messages);
     return;
   }
-  await client.replyMessage(replyToken, messages);
+  const res = await client.replyMessage(replyToken, messages);
+  if (res && (res as any).sentMessages) {
+    await logSentMessages(messages, (res as any).sentMessages);
+  }
+}
+
+// ── Outbound Logging Helper ──
+async function logSentMessages(
+  originalMessages: Message[],
+  sentMessagesInfo: any[],
+) {
+  try {
+    const { saveChatMessage } =
+      await import("../repositories/chatMessageRepository");
+    for (
+      let i = 0;
+      i < Math.min(originalMessages.length, sentMessagesInfo.length);
+      i++
+    ) {
+      const msg = originalMessages[i];
+      const info = sentMessagesInfo[i];
+
+      let textContent = null;
+      if (msg.type === "text") {
+        textContent = msg.text;
+      } else if (msg.type === "flex") {
+        textContent = "[Flex Message: " + msg.altText + "]";
+      } else {
+        textContent = "[" + msg.type.toUpperCase() + " Message]";
+      }
+
+      await saveChatMessage({
+        lineUserId: "system_bot", // LINE reply API doesn't know userId upfront in the wrapper natively without passing MORE args. Using 'system_bot' is fine for quotes, or we can improve it.
+        messageId: info.id,
+        quoteToken: info.quoteToken || null,
+        textContent: textContent,
+        senderRole: "bot",
+      });
+    }
+  } catch (err) {
+    console.error("Failed to log sent messages", err);
+  }
 }
 
 // ── Quick Reply Helpers ──
@@ -66,9 +124,7 @@ export interface QuickReplyLabel {
   text?: string; // text to send (defaults to label)
 }
 
-export function makeQuickReplyItems(
-  items: QuickReplyLabel[],
-): {
+export function makeQuickReplyItems(items: QuickReplyLabel[]): {
   type: "action";
   action: { type: "message"; label: string; text: string };
 }[] {

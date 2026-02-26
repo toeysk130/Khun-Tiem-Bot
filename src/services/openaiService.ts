@@ -254,6 +254,7 @@ export interface ParsedCommand {
 export async function parseNaturalLanguageCommand(
   conversationHistory: { role: string; content: string }[],
   username: string,
+  quotedText?: string | null,
 ): Promise<ParsedCommand | null> {
   const today = new Date();
   const months = [
@@ -275,12 +276,16 @@ export async function parseNaturalLanguageCommand(
   const yy = String(today.getFullYear()).slice(-2);
   const currentDate = `${dd}${mmm}${yy}`;
 
-  const systemPrompt = `${getBotContext()}
+  let systemPrompt = `${getBotContext()}
 
 วันนี้คือ ${currentDate} (${today.toLocaleDateString("th-TH", { weekday: "long", year: "numeric", month: "long", day: "numeric" })})
-ชื่อผู้ใช้คือ "${username}"
+ชื่อผู้ใช้คือ "${username}"`;
 
-คุณเป็นตัวช่วยแปลงภาษาธรรมชาติเป็นคำสั่ง Bot
+  if (quotedText) {
+    systemPrompt += `\n(หมายเหตุ: ผู้ใช้อาจจะกำลังตอบกลับข้อความเดิมของคุณที่ว่า: "${quotedText}")`;
+  }
+
+  systemPrompt += `\nคุณเป็นตัวช่วยแปลงภาษาธรรมชาติเป็นคำสั่ง Bot
 ผู้ใช้อาจพูดแบบธรรมชาติ เช่น "พรุ่งนี้ลาพักร้อนนะ ครึ่งบ่าย" ให้แปลงเป็นคำสั่งที่สมบูรณ์
 
 กฎสำคัญ:

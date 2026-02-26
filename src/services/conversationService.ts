@@ -137,6 +137,8 @@ export async function handleConversation(
   userId: string,
   message: string,
   userMetadata: UserMetaData,
+  quotedText?: string | null,
+  quoteToken?: string | null,
 ): Promise<void> {
   let session = sessions.get(userId);
 
@@ -187,6 +189,7 @@ export async function handleConversation(
         lineClient,
         userMetadata.replyToken,
         "❌ ยกเลิกเรียบร้อย",
+        quoteToken || undefined,
       );
       return;
     }
@@ -196,6 +199,7 @@ export async function handleConversation(
       lineClient,
       userMetadata.replyToken,
       `🤖 ตอบ "ใช่" เพื่อยืนยัน หรือ "ไม่" เพื่อยกเลิก\n\n📝 ${session.pendingCommand}`,
+      quoteToken || undefined,
     );
     return;
   }
@@ -206,13 +210,24 @@ export async function handleConversation(
   const result = await parseNaturalLanguageCommand(
     session.conversationHistory,
     userMetadata.username,
+    quotedText,
   );
 
   if (!result) {
     sessions.delete(userId);
     const { chatWithAI } = await import("./openaiService");
-    const reply = await chatWithAI(message);
-    await replyMessage(lineClient, userMetadata.replyToken, reply);
+
+    let prompt = message;
+    if (quotedText)
+      prompt += `\n(ผู้ใช้ได้ตอบกลับข้อความเดิมของคุณว่า: "${quotedText}")`;
+
+    const reply = await chatWithAI(prompt);
+    await replyMessage(
+      lineClient,
+      userMetadata.replyToken,
+      reply,
+      quoteToken || undefined,
+    );
     return;
   }
 
@@ -220,8 +235,18 @@ export async function handleConversation(
   if (!result.intent) {
     sessions.delete(userId);
     const { chatWithAI } = await import("./openaiService");
-    const reply = await chatWithAI(message);
-    await replyMessage(lineClient, userMetadata.replyToken, reply);
+
+    let prompt = message;
+    if (quotedText)
+      prompt += `\n(ผู้ใช้ได้ตอบกลับข้อความเดิมของคุณว่า: "${quotedText}")`;
+
+    const reply = await chatWithAI(prompt);
+    await replyMessage(
+      lineClient,
+      userMetadata.replyToken,
+      reply,
+      quoteToken || undefined,
+    );
     return;
   }
 
@@ -237,6 +262,7 @@ export async function handleConversation(
       lineClient,
       userMetadata.replyToken,
       `🤖 ${result.question}`,
+      quoteToken || undefined,
     );
     return;
   }
@@ -259,6 +285,7 @@ export async function handleConversation(
       const retry = await parseNaturalLanguageCommand(
         session.conversationHistory,
         userMetadata.username,
+        quotedText,
       );
 
       // Retry succeeded with a valid command
@@ -271,6 +298,7 @@ export async function handleConversation(
             lineClient,
             userMetadata.replyToken,
             `🤖 ขุนเทียมแปลงให้แล้วนะ:\n\n📝 ${retry.command}\n\nตอบ "ใช่" เพื่อยืนยัน หรือ "ไม่" เพื่อยกเลิก`,
+            quoteToken || undefined,
           );
           return;
         }
@@ -286,6 +314,7 @@ export async function handleConversation(
           lineClient,
           userMetadata.replyToken,
           `🤖 ${retry.question}`,
+          quoteToken || undefined,
         );
         return;
       }
@@ -295,6 +324,7 @@ export async function handleConversation(
         lineClient,
         userMetadata.replyToken,
         `🤖 ขอโทษที ข้อมูลยังไม่ครบ: ${validationError}\nช่วยบอกรายละเอียดเพิ่มหน่อยนะเพื่อน`,
+        quoteToken || undefined,
       );
       return;
     }
@@ -310,6 +340,7 @@ export async function handleConversation(
       lineClient,
       userMetadata.replyToken,
       `🤖 ขุนเทียมแปลงให้แล้วนะ:\n\n📝 ${result.command}\n\nตอบ "ใช่" เพื่อยืนยัน หรือ "ไม่" เพื่อยกเลิก`,
+      quoteToken || undefined,
     );
     return;
   }

@@ -43,6 +43,11 @@ app.use("/webhook", webhookRouter);
 setupCronJobs();
 
 // Start the server
-app.listen(port, () => {
+app.listen(port, async () => {
   console.log(`Server running at http://localhost:${port}`);
+
+  // Initialize Database Tables
+  const { createChatMessageTableIfNotExists } =
+    await import("./repositories/chatMessageRepository");
+  await createChatMessageTableIfNotExists();
 });
