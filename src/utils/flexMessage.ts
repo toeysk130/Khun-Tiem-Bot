@@ -809,22 +809,20 @@ export function buildPersonalReportBubble(
           },
           {
             type: "text" as const,
-            text: getDisplayLeaveDate(l.leave_start_dt, l.leave_end_dt),
+            text: `${getDisplayLeaveDate(l.leave_start_dt, l.leave_end_dt)} (${l.period_detail})`,
             size: "xxs" as const,
-            flex: 3,
+            flex: 4,
             color: COLORS.muted,
             align: "end" as const,
+            wrap: true,
           },
         ],
       });
-      // Detail row: period + description
-      const detail = [l.period_detail, l.description]
-        .filter(Boolean)
-        .join(" • ");
-      if (detail) {
+      // Detail row: description only
+      if (l.description) {
         rows.push({
           type: "text" as const,
-          text: `     ${detail}`,
+          text: `     ${l.description}`,
           size: "xxs" as const,
           color: COLORS.muted,
           margin: "none" as const,

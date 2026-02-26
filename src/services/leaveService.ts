@@ -124,6 +124,9 @@ export async function addNewHhLeaveRequest(
     formattedLeaveAmount,
   } = getFormatLeaveDate(leaveStartDate, leaveAmount);
 
+  const hhHours = hhAmt.toLowerCase().endsWith("h") ? hhAmt : `${hhAmt}h`;
+  const periodDetail = `${leaveAmount} ${hhHours}`;
+
   const values = [
     getCurrentTimestamp(),
     username,
@@ -131,7 +134,7 @@ export async function addNewHhLeaveRequest(
     formattedLeaveStartDate,
     formattedLeaveEndDate,
     formattedLeaveAmount,
-    leaveAmount,
+    periodDetail,
     "key",
     description,
     true,
@@ -141,7 +144,6 @@ export async function addNewHhLeaveRequest(
   await delHhRecord(pool, username, parseInt(hhAmt), description);
 
   const remaining = await getRemainingHh(pool, username);
-  const hhHours = hhAmt.toLowerCase().endsWith("h") ? hhAmt : `${hhAmt}h`;
 
   return buildResultBubble("hh", `ใช้ HH สำหรับ ${username}`, [
     { label: "⏰ ใช้", value: hhHours },
