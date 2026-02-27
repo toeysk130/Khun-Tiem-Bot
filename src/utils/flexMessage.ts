@@ -780,6 +780,27 @@ export function buildPersonalReportBubble(
   function buildLeaveRows(items: ILeaveSchedule[]) {
     const rows: any[] = [];
     items.forEach((l) => {
+      let displayLeaveType = l.leave_type;
+      let displayPeriodDetail = l.period_detail;
+
+      // Special formatting for "hh"
+      if (l.leave_type === "hh") {
+        // Try to extract hours from period_detail (e.g. "ครึ่งบ่าย 2h" -> match "2h")
+        const hourMatch = l.period_detail.match(/(\d+h)/i);
+        if (hourMatch) {
+          const hours = hourMatch[1];
+          displayLeaveType = `hh (${hours})`;
+          displayPeriodDetail = l.period_detail.replace(hours, "").trim();
+        } else {
+          // Fallback to checking description for hours
+          const descHourMatch = l.description?.match(/(\d+h)/i);
+          if (descHourMatch) {
+            const hours = descHourMatch[1];
+            displayLeaveType = `hh (${hours})`;
+          }
+        }
+      }
+
       // Main row: emoji + ID + type + date
       rows.push({
         type: "box" as const,
@@ -802,14 +823,14 @@ export function buildPersonalReportBubble(
           },
           {
             type: "text" as const,
-            text: l.leave_type,
+            text: displayLeaveType,
             size: "xs" as const,
             flex: 2,
             color: COLORS.dark,
           },
           {
             type: "text" as const,
-            text: `${getDisplayLeaveDate(l.leave_start_dt, l.leave_end_dt)} (${l.period_detail})`,
+            text: `${getDisplayLeaveDate(l.leave_start_dt, l.leave_end_dt)}${displayPeriodDetail ? ` (${displayPeriodDetail})` : ""}`,
             size: "xxs" as const,
             flex: 4,
             color: COLORS.muted,

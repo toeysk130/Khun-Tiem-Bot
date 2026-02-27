@@ -47,7 +47,7 @@ export async function handlePostbackEvent(event: PostbackEvent) {
   switch (action) {
     case "delete":
       if (id) {
-        await executeDelete(replyToken, id);
+        await executeDelete(replyToken, id, event.source.userId);
       }
       break;
 

@@ -76,9 +76,35 @@ export async function handleDeleteRequest(
 }
 
 // Called from postback handler when user confirms deletion
-export async function executeDelete(replyToken: string, id: string) {
+export async function executeDelete(
+  replyToken: string,
+  id: string,
+  userId?: string,
+) {
   try {
     const detail = await getLeaveById(pool, id);
+
+    if (userId) {
+      const { getMemberByUid } = require("../../repositories/memberRepository");
+      const user = await getMemberByUid(pool, userId);
+
+      if (!user) {
+        return replyMessage(
+          lineClient,
+          replyToken,
+          `⚠️ ไม่พบข้อมูลผู้ใช้งาน กรุณาสมัครใช้งานก่อน`,
+        );
+      }
+
+      // Check if user is admin or the owner of the leave request
+      if (!user.is_admin && detail.member !== user.name) {
+        return replyMessage(
+          lineClient,
+          replyToken,
+          `⛔ คุณไม่มีสิทธิ์ลบรายการนี้ (รายการนี้เป็นของ ${detail.member})`,
+        );
+      }
+    }
 
     // If this is an HH leave entry, reverse the HH deduction first
     if (detail.leave_type === "hh") {
