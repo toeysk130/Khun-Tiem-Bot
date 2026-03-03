@@ -84,8 +84,7 @@ export async function handleCronCommand(
       break;
     }
     case "lottie": {
-      // POC: Animated APNG celebrating "no leaves tomorrow"
-      // LINE Flex Message image component supports animated APNG via animated:true
+      // POC: Animated APNG in body (not hero) — LINE may not animate hero images
       const GITHUB_RAW =
         "https://raw.githubusercontent.com/toeysk130/Khun-Tiem-Bot/main";
       const flexMsg: any = {
@@ -94,37 +93,46 @@ export async function handleCronCommand(
         contents: {
           type: "bubble",
           size: "mega",
-          hero: {
-            type: "image",
-            url: `${GITHUB_RAW}/assets/celebration.png`,
-            size: "full",
-            aspectRatio: "1:1",
-            aspectMode: "cover",
-            animated: true,
-          },
           body: {
             type: "box",
             layout: "vertical",
+            paddingAll: "0px",
             contents: [
               {
-                type: "text",
-                text: "🎉 ไม่มีใครลาพรุ่งนี้!",
-                weight: "bold",
-                size: "xl",
-                color: "#1B2838",
-                align: "center",
+                // APNG animated image in body (not hero, which may strip animation)
+                type: "image",
+                url: `${GITHUB_RAW}/assets/celebration_anim.png`,
+                size: "full",
+                aspectRatio: "1:1",
+                aspectMode: "cover",
+                animated: true,
+                margin: "none",
               },
               {
-                type: "text",
-                text: "เยี่ยมมากเลย! พรุ่งนี้ไม่มีใครลาเลยสักคน ✨",
-                size: "sm",
-                color: "#6C7A89",
-                align: "center",
-                margin: "sm",
+                type: "box",
+                layout: "vertical",
+                paddingAll: "20px",
+                backgroundColor: "#FAFBFC",
+                contents: [
+                  {
+                    type: "text",
+                    text: "🎉 ไม่มีใครลาพรุ่งนี้!",
+                    weight: "bold",
+                    size: "xl",
+                    color: "#1B2838",
+                    align: "center",
+                  },
+                  {
+                    type: "text",
+                    text: "เยี่ยมมากเลย! พรุ่งนี้ไม่มีใครลาเลยสักคน ✨",
+                    size: "sm",
+                    color: "#6C7A89",
+                    align: "center",
+                    margin: "sm",
+                  },
+                ],
               },
             ],
-            paddingAll: "20px",
-            backgroundColor: "#FAFBFC",
           },
         },
       };
