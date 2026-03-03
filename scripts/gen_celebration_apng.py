@@ -3,8 +3,8 @@ from PIL import Image, ImageDraw
 import random
 import math
 
-WIDTH, HEIGHT = 800, 800
-FRAMES = 30
+WIDTH, HEIGHT = 560, 560   # smaller = smaller file size (LINE limit: 300KB)
+FRAMES = 20
 COLORS = [
     "#FF6B6B", "#FFD93D", "#6BCB77", "#4D96FF",
     "#C77DFF", "#F4A261", "#2EC4B6", "#E91E63"
@@ -17,7 +17,7 @@ def hex_to_rgb(h):
 # Seed confetti pieces
 random.seed(2024)
 pieces = []
-for _ in range(80):
+for _ in range(55):
     pieces.append({
         'x': random.randint(0, WIDTH),
         'y': random.randint(-HEIGHT, HEIGHT),
@@ -68,7 +68,7 @@ frames[0].save(
     output_path,
     save_all=True,
     append_images=frames[1:],
-    duration=60,
+    duration=80,
     loop=0,
     format='PNG'
 )
