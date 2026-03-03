@@ -205,13 +205,67 @@ export function buildTodayReportBubble(leaves: ILeaveSchedule[]): FlexMessage {
   };
 }
 
+// Shared day color map by day abbreviation
+const DAY_COLOR_MAP: Record<string, string> = {
+  Mon: "#F1C40F", // เหลือง
+  Tue: "#E91E63", // ชมพู
+  Wed: "#27AE60", // เขียว
+  Thu: "#E67E22", // ส้ม
+  Fri: "#3498DB", // ฟ้า
+  Sat: "#9B59B6", // ม่วง
+  Sun: "#E74C3C", // แดง
+};
+
+const MONTH_ABBR = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+// "2025-03-05" → "Mar/05"
+function formatDayPillDate(isoDate: string): string {
+  const parts = isoDate.split("-");
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  const day = parts[2];
+  return `${MONTH_ABBR[monthIdx]}/${day}`;
+}
+
+// "2025-03-05" → "March 2025"
+function formatMonthLabel(isoDate: string): string {
+  const parts = isoDate.split("-");
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  const year = parts[0];
+  const fullMonths = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+  return `${fullMonths[monthIdx]} ${year}`;
+}
+
 export function buildWeeklyReportBubble(
   title: string,
   dayRows: { day: string; date: string; members: string[] }[],
 ): FlexMessage {
-  const dayColors = ["#F1C40F", "#E91E63", "#27AE60", "#E67E22", "#3498DB"];
-
-  const rows = dayRows.map((row, i) => ({
+  const rows = dayRows.map((row) => ({
     type: "box" as const,
     layout: "horizontal" as const,
     spacing: "sm" as const,
@@ -231,16 +285,16 @@ export function buildWeeklyReportBubble(
           },
           {
             type: "text" as const,
-            text: row.date.split("-").pop() || "",
+            text: formatDayPillDate(row.date),
             size: "xxs" as const,
             color: "#FFFFFF",
             align: "center" as const,
           },
         ],
-        backgroundColor: dayColors[i],
+        backgroundColor: DAY_COLOR_MAP[row.day] || "#95A5A6",
         cornerRadius: "md",
         paddingAll: "5px",
-        width: "45px",
+        width: "52px",
         justifyContent: "center" as const,
       },
       {
@@ -255,6 +309,9 @@ export function buildWeeklyReportBubble(
     ],
   }));
 
+  const monthLabel =
+    dayRows.length > 0 ? formatMonthLabel(dayRows[0].date) : "";
+
   const bubble: FlexBubble = {
     type: "bubble",
     size: "mega",
@@ -268,6 +325,12 @@ export function buildWeeklyReportBubble(
           weight: "bold",
           size: "md",
           color: "#FFFFFF",
+        },
+        {
+          type: "text",
+          text: monthLabel,
+          size: "xs",
+          color: "#FFFFFFCC",
         },
       ],
       backgroundColor: COLORS.info,
@@ -1384,9 +1447,7 @@ export function buildCronWeeklyCarousel(
   const bubbles: FlexBubble[] = [];
 
   // ── Bubble 1: Weekly Leave Report ──
-  const dayColors = ["#5B8DEF", "#E85D75", "#2ECC71", "#F39C12", "#9B59B6"];
-
-  const leaveRows = dayRows.map((row, i) => ({
+  const leaveRows = dayRows.map((row) => ({
     type: "box" as const,
     layout: "horizontal" as const,
     spacing: "md" as const,
@@ -1406,16 +1467,16 @@ export function buildCronWeeklyCarousel(
           },
           {
             type: "text" as const,
-            text: row.date.split("-").slice(1).join("/"),
+            text: formatDayPillDate(row.date),
             size: "xxs" as const,
             color: "#FFFFFFCC",
             align: "center" as const,
           },
         ],
-        backgroundColor: dayColors[i % dayColors.length],
+        backgroundColor: DAY_COLOR_MAP[row.day] || "#95A5A6",
         cornerRadius: "lg",
         paddingAll: "6px",
-        width: "48px",
+        width: "52px",
         justifyContent: "center" as const,
       },
       {
@@ -1431,6 +1492,8 @@ export function buildCronWeeklyCarousel(
   }));
 
   const totalLeaves = dayRows.reduce((s, r) => s + r.members.length, 0);
+  const monthLabel =
+    dayRows.length > 0 ? formatMonthLabel(dayRows[0].date) : "";
 
   bubbles.push({
     type: "bubble",
@@ -1448,8 +1511,9 @@ export function buildCronWeeklyCarousel(
         },
         {
           type: "text",
-          text:
-            totalLeaves > 0
+          text: monthLabel
+            ? `${monthLabel} • ${totalLeaves > 0 ? `มีคนลารวม ${totalLeaves} คน/วัน` : "ไม่มีใครลาเลย 🎉"}`
+            : totalLeaves > 0
               ? `มีคนลารวม ${totalLeaves} คน/วัน`
               : "สัปดาห์นี้ไม่มีใครลาเลย 🎉",
           size: "xs",
