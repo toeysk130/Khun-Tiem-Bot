@@ -32,6 +32,7 @@ import { handleShowTableCommand } from "./commands/showTable";
 import { handleStatsCommand } from "./commands/statsCommand";
 import { handleSummaryCommand } from "./commands/summaryCommand";
 import { handleUpdateRequest } from "./commands/updateRequests";
+import { handleCronCommand } from "./commands/cronCommand";
 import { Message } from "@line/bot-sdk";
 
 // Commands that already use AI — skip AI follow-up to avoid double calls
@@ -47,6 +48,7 @@ const QUIET_COMMANDS = [
   "เตือน",
   "โหมด",
   "แจ้งลาง่าย",
+  "cron",
 ];
 
 // Commands that must be used in Group Chat only
@@ -175,6 +177,10 @@ export async function commandDispatcher(
         break;
       case "ภาพรวม":
         await handleVisualWeekReport(userMetadata.replyToken);
+        break;
+      case "cron":
+        wasSuccessful =
+          (await handleCronCommand(commandArr, userMetadata)) !== false;
         break;
       case "แจ้งลาง่าย": {
         if (userMetadata.chatType === "GROUP") {
