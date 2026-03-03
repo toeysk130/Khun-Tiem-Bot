@@ -18,7 +18,8 @@ const HELP_TEXT =
   "🕐 คำสั่ง cron (Admin only)\n\n" +
   "  cron weekly    — ทดสอบ Weekly Report\n" +
   "  cron reminder  — ทดสอบ Daily Reminder\n" +
-  "  cron nextweek  — ทดสอบ Next Week Report";
+  "  cron nextweek  — ทดสอบ Next Week Report\n" +
+  "  cron lottie    — ทดสอบ Celebration APNG Animation (POC)";
 
 export async function handleCronCommand(
   commandArr: string[],
@@ -79,6 +80,54 @@ export async function handleCronCommand(
         );
         break;
       }
+      await replyFlexMessage(lineClient, userMetadata.replyToken, flexMsg);
+      break;
+    }
+    case "lottie": {
+      // POC: Animated APNG celebrating "no leaves tomorrow"
+      // LINE Flex Message image component supports animated APNG via animated:true
+      const GITHUB_RAW =
+        "https://raw.githubusercontent.com/toeysk130/Khun-Tiem-Bot/main";
+      const flexMsg: any = {
+        type: "flex",
+        altText: "🎉 ไม่มีใครลาพรุ่งนี้!",
+        contents: {
+          type: "bubble",
+          size: "mega",
+          hero: {
+            type: "image",
+            url: `${GITHUB_RAW}/assets/celebration.png`,
+            size: "full",
+            aspectRatio: "1:1",
+            aspectMode: "cover",
+            animated: true,
+          },
+          body: {
+            type: "box",
+            layout: "vertical",
+            contents: [
+              {
+                type: "text",
+                text: "🎉 ไม่มีใครลาพรุ่งนี้!",
+                weight: "bold",
+                size: "xl",
+                color: "#1B2838",
+                align: "center",
+              },
+              {
+                type: "text",
+                text: "เยี่ยมมากเลย! พรุ่งนี้ไม่มีใครลาเลยสักคน ✨",
+                size: "sm",
+                color: "#6C7A89",
+                align: "center",
+                margin: "sm",
+              },
+            ],
+            paddingAll: "20px",
+            backgroundColor: "#FAFBFC",
+          },
+        },
+      };
       await replyFlexMessage(lineClient, userMetadata.replyToken, flexMsg);
       break;
     }
