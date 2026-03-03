@@ -6,7 +6,10 @@ import {
   getLeavesToday,
 } from "../repositories/leaveScheduleRepository";
 import { generateDailyGreeting } from "../services/openaiService";
-import { getColorEmoji, getDisplayLeaveDate } from "../utils/utils";
+import {
+  buildCronReminderBubble,
+  buildCronWeeklyCarousel,
+} from "../utils/flexMessage";
 import axios from "axios";
 import * as dotenv from "dotenv";
 
@@ -28,63 +31,30 @@ function createAxiosInstance() {
 export async function pushWeeklyMessage() {
   const GROUP_ID = process.env.GROUP_ID || "";
   const axiosInstance = createAxiosInstance();
-  const pushMessages: any[] = [];
 
-  // 1. Weekly leave report
-  const { textMsg, leaveCount } = await buildWeeklyReportData("วีคนี้");
-  if (leaveCount > 0) {
-    pushMessages.push({ type: "text", text: textMsg });
-  }
+  // 1. Weekly leave report (day rows)
+  const { dayRows } = await buildWeeklyReportData("วีคนี้");
 
   // 2. Wait approve list
   const waitingLeaves = await getAllWaitingApproval(pool);
-  if (waitingLeaves.length > 0) {
-    const waitApproveMsg =
-      "✏️ รายการที่รอการ Approve\n\n" +
-      waitingLeaves
-        .map(
-          (detail) =>
-            `${getColorEmoji(detail.is_approve, detail.status)}<${detail.id}> ${
-              detail.member
-            } ${detail.leave_type} ${getDisplayLeaveDate(
-              detail.leave_start_dt,
-              detail.leave_end_dt,
-            )} ${detail.period_detail} ${detail.status}`,
-        )
-        .join("\n");
-    pushMessages.push({ type: "text", text: waitApproveMsg });
-  }
 
   // 3. HH wait approve
   const notApproveHHLists = await getNotApproveHHLists(pool);
-  if (notApproveHHLists.length > 0) {
-    const waitApproveHh =
-      "❤️ HH ที่รอการ Approve\n\n" +
-      notApproveHHLists
-        .map(
-          (hh) =>
-            `🙅‍♂️ <${hh.id}> ${hh.member} ${hh.hours}h ${
-              hh.description ? `(${hh.description})` : ""
-            }`,
-        )
-        .join("\n");
 
-    pushMessages.push({ type: "text", text: waitApproveHh });
-  }
+  // Build single Flex Carousel combining all sections
+  const flexMsg = buildCronWeeklyCarousel(
+    dayRows,
+    waitingLeaves,
+    notApproveHHLists,
+  );
 
-  if (pushMessages.length > 0) {
-    await axiosInstance
-      .post("", {
-        to: GROUP_ID,
-        messages: pushMessages,
-      })
-      .then((response) => console.log("Weekly report sent:", response.data))
-      .catch((error) => console.error("Error sending weekly report:", error));
-  } else {
-    console.log(
-      "No messages to push for weekly report (no leaves, no wait approve).",
-    );
-  }
+  await axiosInstance
+    .post("", {
+      to: GROUP_ID,
+      messages: [flexMsg],
+    })
+    .then((response) => console.log("Weekly report sent:", response.data))
+    .catch((error) => console.error("Error sending weekly report:", error));
 }
 
 export async function pushNextWeekReport() {
@@ -135,20 +105,11 @@ export async function pushReminderMessage() {
     return;
   }
 
-  // Has leaves — send reminder + AI message
-  const memberList = leavesTomorrow
-    .map((l) => `  • ${l.member} — ${l.leave_type} ${l.period_detail}`)
-    .join("\n");
-
-  const reminderMsg = `🔔 เตือน! พรุ่งนี้มีคนลา ${leavesTomorrow.length} คน\n\n${memberList}`;
-
-  // Combine: reminder + AI greeting
-  const fullMsg = aiGreeting
-    ? `${reminderMsg}\n\n🤖 ขุนเทียมบอก:\n${aiGreeting}`
-    : reminderMsg;
+  // Build single Flex bubble with leave list + AI greeting
+  const flexMsg = buildCronReminderBubble(leavesTomorrow, aiGreeting);
 
   await axiosInstance
-    .post("", { to: GROUP_ID, messages: [{ type: "text", text: fullMsg }] })
+    .post("", { to: GROUP_ID, messages: [flexMsg] })
     .then((response) => console.log("Reminder sent:", response.data))
     .catch((error) => console.error("Error sending reminder:", error));
 }

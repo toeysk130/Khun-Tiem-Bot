@@ -1325,6 +1325,534 @@ export function buildResultBubble(
 }
 
 // ══════════════════════════════════════════════════════════
+// Cron Job Flex Builders — Minimal Modern Design
+// ══════════════════════════════════════════════════════════
+
+const CRON = {
+  bg: "#FAFBFC",
+  card: "#FFFFFF",
+  headerWeekly: "#1B2838",
+  headerApprove: "#2D4A3E",
+  headerHH: "#4A2D3E",
+  headerReminder: "#2D3A4A",
+  accent: "#6C7A89",
+  text: "#1A1A2E",
+  sub: "#8B95A2",
+  divider: "#E8ECF0",
+  tagLeave: "#E8F4FD",
+  tagLeaveText: "#2980B9",
+  tagHH: "#FDE8F0",
+  tagHHText: "#C0392B",
+  approved: "#27AE60",
+  pending: "#E67E22",
+  nokey: "#95A5A6",
+};
+
+// ── Cron Helpers ──
+
+function cronSectionTitle(text: string) {
+  return {
+    type: "text" as const,
+    text,
+    size: "xs" as const,
+    color: CRON.sub,
+    weight: "bold" as const,
+    margin: "lg" as const,
+  };
+}
+
+function cronDivider() {
+  return {
+    type: "separator" as const,
+    margin: "lg" as const,
+    color: CRON.divider,
+  };
+}
+
+// ── Weekly Push Carousel ──
+
+export function buildCronWeeklyCarousel(
+  dayRows: { day: string; date: string; members: string[] }[],
+  waitApproveLeaves: ILeaveSchedule[],
+  waitApproveHH: {
+    id: number;
+    member: string;
+    hours: number;
+    description: string;
+  }[],
+): FlexMessage {
+  const bubbles: FlexBubble[] = [];
+
+  // ── Bubble 1: Weekly Leave Report ──
+  const dayColors = ["#5B8DEF", "#E85D75", "#2ECC71", "#F39C12", "#9B59B6"];
+
+  const leaveRows = dayRows.map((row, i) => ({
+    type: "box" as const,
+    layout: "horizontal" as const,
+    spacing: "md" as const,
+    margin: "md" as const,
+    contents: [
+      {
+        type: "box" as const,
+        layout: "vertical" as const,
+        contents: [
+          {
+            type: "text" as const,
+            text: row.day,
+            size: "xxs" as const,
+            weight: "bold" as const,
+            color: "#FFFFFF",
+            align: "center" as const,
+          },
+          {
+            type: "text" as const,
+            text: row.date.split("-").slice(1).join("/"),
+            size: "xxs" as const,
+            color: "#FFFFFFCC",
+            align: "center" as const,
+          },
+        ],
+        backgroundColor: dayColors[i % dayColors.length],
+        cornerRadius: "lg",
+        paddingAll: "6px",
+        width: "48px",
+        justifyContent: "center" as const,
+      },
+      {
+        type: "text" as const,
+        text: row.members.length > 0 ? row.members.join(", ") : "ไม่มีใครลา ✨",
+        size: "xs" as const,
+        flex: 5,
+        wrap: true,
+        color: row.members.length > 0 ? CRON.text : CRON.sub,
+        gravity: "center" as const,
+      },
+    ],
+  }));
+
+  const totalLeaves = dayRows.reduce((s, r) => s + r.members.length, 0);
+
+  bubbles.push({
+    type: "bubble",
+    size: "mega",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: "📊 สรุปการลาประจำสัปดาห์",
+          weight: "bold",
+          size: "md",
+          color: "#FFFFFF",
+        },
+        {
+          type: "text",
+          text:
+            totalLeaves > 0
+              ? `มีคนลารวม ${totalLeaves} คน/วัน`
+              : "สัปดาห์นี้ไม่มีใครลาเลย 🎉",
+          size: "xs",
+          color: "#FFFFFF99",
+        },
+      ],
+      backgroundColor: CRON.headerWeekly,
+      paddingAll: "16px",
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      contents: leaveRows,
+      paddingAll: "16px",
+      backgroundColor: CRON.bg,
+    },
+  });
+
+  // ── Bubble 2: Wait Approve (only if data exists) ──
+  if (waitApproveLeaves.length > 0) {
+    const approveRows = waitApproveLeaves.map((l) => {
+      const statusIcon = l.is_approve ? "✅" : l.status === "key" ? "🔑" : "⏳";
+      const statusClr = l.is_approve
+        ? CRON.approved
+        : l.status === "key"
+          ? CRON.pending
+          : CRON.nokey;
+
+      return {
+        type: "box" as const,
+        layout: "horizontal" as const,
+        spacing: "sm" as const,
+        margin: "md" as const,
+        contents: [
+          {
+            type: "text" as const,
+            text: statusIcon,
+            size: "sm" as const,
+            flex: 0,
+          },
+          {
+            type: "box" as const,
+            layout: "vertical" as const,
+            flex: 5,
+            contents: [
+              {
+                type: "text" as const,
+                text: l.member,
+                size: "sm" as const,
+                weight: "bold" as const,
+                color: CRON.text,
+              },
+              {
+                type: "text" as const,
+                text: `${l.leave_type} • ${getDisplayLeaveDate(l.leave_start_dt, l.leave_end_dt)} • ${l.period_detail}`,
+                size: "xxs" as const,
+                color: CRON.sub,
+                wrap: true,
+              },
+            ],
+          },
+          {
+            type: "box" as const,
+            layout: "vertical" as const,
+            flex: 0,
+            contents: [
+              {
+                type: "text" as const,
+                text: `#${l.id}`,
+                size: "xxs" as const,
+                color: statusClr,
+                align: "end" as const,
+              },
+            ],
+            justifyContent: "center" as const,
+          },
+        ],
+      };
+    });
+
+    bubbles.push({
+      type: "bubble",
+      size: "mega",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "✏️ รายการรออนุมัติ",
+            weight: "bold",
+            size: "md",
+            color: "#FFFFFF",
+          },
+          {
+            type: "text",
+            text: `${waitApproveLeaves.length} รายการ`,
+            size: "xs",
+            color: "#FFFFFF99",
+          },
+        ],
+        backgroundColor: CRON.headerApprove,
+        paddingAll: "16px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "box" as const,
+            layout: "horizontal" as const,
+            contents: [
+              {
+                type: "text" as const,
+                text: "✅ Approved",
+                size: "xxs" as const,
+                color: CRON.approved,
+                flex: 1,
+              },
+              {
+                type: "text" as const,
+                text: "🔑 Keyed",
+                size: "xxs" as const,
+                color: CRON.pending,
+                flex: 1,
+              },
+              {
+                type: "text" as const,
+                text: "⏳ Pending",
+                size: "xxs" as const,
+                color: CRON.nokey,
+                flex: 1,
+              },
+            ],
+          },
+          {
+            type: "separator" as const,
+            margin: "md" as const,
+            color: CRON.divider,
+          },
+          ...approveRows,
+        ],
+        paddingAll: "16px",
+        backgroundColor: CRON.bg,
+      },
+    });
+  }
+
+  // ── Bubble 3: HH Wait Approve (only if data exists) ──
+  if (waitApproveHH.length > 0) {
+    const hhRows = waitApproveHH.map((hh) => ({
+      type: "box" as const,
+      layout: "horizontal" as const,
+      spacing: "sm" as const,
+      margin: "md" as const,
+      contents: [
+        {
+          type: "text" as const,
+          text: "❤️",
+          size: "sm" as const,
+          flex: 0,
+        },
+        {
+          type: "box" as const,
+          layout: "vertical" as const,
+          flex: 5,
+          contents: [
+            {
+              type: "text" as const,
+              text: hh.member,
+              size: "sm" as const,
+              weight: "bold" as const,
+              color: CRON.text,
+            },
+            {
+              type: "text" as const,
+              text: `${hh.hours}h${hh.description ? ` — ${hh.description}` : ""}`,
+              size: "xxs" as const,
+              color: CRON.sub,
+              wrap: true,
+            },
+          ],
+        },
+        {
+          type: "box" as const,
+          layout: "vertical" as const,
+          flex: 0,
+          contents: [
+            {
+              type: "text" as const,
+              text: `#${hh.id}`,
+              size: "xxs" as const,
+              color: CRON.sub,
+              align: "end" as const,
+            },
+          ],
+          justifyContent: "center" as const,
+        },
+      ],
+    }));
+
+    const totalHours = waitApproveHH.reduce((s, h) => s + h.hours, 0);
+
+    bubbles.push({
+      type: "bubble",
+      size: "mega",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "❤️ HH รออนุมัติ",
+            weight: "bold",
+            size: "md",
+            color: "#FFFFFF",
+          },
+          {
+            type: "text",
+            text: `${waitApproveHH.length} รายการ • รวม ${totalHours}h`,
+            size: "xs",
+            color: "#FFFFFF99",
+          },
+        ],
+        backgroundColor: CRON.headerHH,
+        paddingAll: "16px",
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: hhRows,
+        paddingAll: "16px",
+        backgroundColor: CRON.bg,
+      },
+    });
+  }
+
+  // If no bubbles at all (shouldn't happen since weekly is always added)
+  if (bubbles.length === 0) {
+    return {
+      type: "flex",
+      altText: "📊 สรุปประจำสัปดาห์",
+      contents: bubbles[0],
+    };
+  }
+
+  // Single bubble → send as bubble, multiple → carousel
+  if (bubbles.length === 1) {
+    return {
+      type: "flex",
+      altText: "📊 สรุปการลาประจำสัปดาห์",
+      contents: bubbles[0],
+    };
+  }
+
+  return {
+    type: "flex",
+    altText: "📊 สรุปประจำสัปดาห์",
+    contents: {
+      type: "carousel",
+      contents: bubbles,
+    } as FlexCarousel,
+  };
+}
+
+// ── Daily Reminder Bubble ──
+
+export function buildCronReminderBubble(
+  leavesTomorrow: {
+    member: string;
+    leave_type: string;
+    period_detail: string;
+  }[],
+  aiGreeting: string,
+): FlexMessage {
+  const memberRows = leavesTomorrow.map((l) => ({
+    type: "box" as const,
+    layout: "horizontal" as const,
+    spacing: "sm" as const,
+    margin: "md" as const,
+    contents: [
+      {
+        type: "box" as const,
+        layout: "vertical" as const,
+        flex: 0,
+        width: "6px",
+        height: "40px",
+        backgroundColor: l.leave_type.includes("ป่วย")
+          ? "#E74C3C"
+          : l.leave_type.includes("พักร้อน")
+            ? "#3498DB"
+            : "#F39C12",
+        cornerRadius: "md",
+      },
+      {
+        type: "box" as const,
+        layout: "vertical" as const,
+        flex: 5,
+        contents: [
+          {
+            type: "text" as const,
+            text: l.member,
+            size: "sm" as const,
+            weight: "bold" as const,
+            color: CRON.text,
+          },
+          {
+            type: "text" as const,
+            text: `${l.leave_type} • ${l.period_detail}`,
+            size: "xxs" as const,
+            color: CRON.sub,
+          },
+        ],
+      },
+    ],
+  }));
+
+  const bodyContents: any[] = [
+    {
+      type: "text" as const,
+      text: "รายชื่อ",
+      size: "xxs" as const,
+      color: CRON.sub,
+      weight: "bold" as const,
+    },
+    ...memberRows,
+  ];
+
+  // Add AI greeting section if available
+  if (aiGreeting) {
+    bodyContents.push(
+      {
+        type: "separator" as const,
+        margin: "xl" as const,
+        color: CRON.divider,
+      },
+      {
+        type: "box" as const,
+        layout: "horizontal" as const,
+        margin: "lg" as const,
+        spacing: "sm" as const,
+        contents: [
+          {
+            type: "text" as const,
+            text: "🤖",
+            size: "sm" as const,
+            flex: 0,
+          },
+          {
+            type: "text" as const,
+            text: aiGreeting,
+            size: "xs" as const,
+            color: CRON.accent,
+            wrap: true,
+            flex: 5,
+            style: "italic" as const,
+          },
+        ],
+      },
+    );
+  }
+
+  const bubble: FlexBubble = {
+    type: "bubble",
+    size: "mega",
+    header: {
+      type: "box",
+      layout: "vertical",
+      contents: [
+        {
+          type: "text",
+          text: "🔔 แจ้งเตือนการลาพรุ่งนี้",
+          weight: "bold",
+          size: "md",
+          color: "#FFFFFF",
+        },
+        {
+          type: "text",
+          text: `มีคนลา ${leavesTomorrow.length} คน`,
+          size: "xs",
+          color: "#FFFFFF99",
+        },
+      ],
+      backgroundColor: CRON.headerReminder,
+      paddingAll: "16px",
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      contents: bodyContents,
+      paddingAll: "16px",
+      backgroundColor: CRON.bg,
+    },
+  };
+
+  return {
+    type: "flex",
+    altText: `🔔 พรุ่งนี้มีคนลา ${leavesTomorrow.length} คน`,
+    contents: bubble,
+  };
+}
+
+// ══════════════════════════════════════════════════════════
 // Leave Date Picker Flow — Interactive leave request via Flex
 // ══════════════════════════════════════════════════════════
 

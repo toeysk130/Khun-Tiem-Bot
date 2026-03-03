@@ -303,7 +303,7 @@ export async function buildWeeklyReportData(reportType: string) {
     }\n`;
   });
 
-  return { flexMsg, textMsg, leaveCount: leaveListThisWeeks.length };
+  return { flexMsg, textMsg, leaveCount: leaveListThisWeeks.length, dayRows };
 }
 
 // Keep backward compat for pushMessage.ts
