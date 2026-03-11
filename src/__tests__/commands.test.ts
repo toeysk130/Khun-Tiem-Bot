@@ -590,6 +590,64 @@ describe("Command Handlers", () => {
         }),
       );
     });
+
+    it("should reject hh ลบ without ID", async () => {
+      const { handleHhCommand } = require("../handlers/commands/hhCommands");
+      await handleHhCommand(["hh", "ลบ"], mockUserMetadata);
+      expect(lineClient.replyMessage).toHaveBeenCalledWith(
+        mockUserMetadata.replyToken,
+        expect.objectContaining({
+          text: expect.stringContaining("ไม่ถูกต้อง"),
+        }),
+      );
+    });
+
+    it("should reject hh ลบ if ID not owned by user", async () => {
+      const { handleHhCommand } = require("../handlers/commands/hhCommands");
+      pool.query.mockResolvedValueOnce({ rows: [{ total: 0 }] });
+
+      await handleHhCommand(["hh", "ลบ", "99"], mockUserMetadata);
+      expect(lineClient.replyMessage).toHaveBeenCalledWith(
+        mockUserMetadata.replyToken,
+        expect.objectContaining({
+          text: expect.stringContaining("ไม่มี ID:99"),
+        }),
+      );
+    });
+
+    it("should allow admin to delete any HH record", async () => {
+      const { handleHhCommand } = require("../handlers/commands/hhCommands");
+      pool.query
+        .mockResolvedValueOnce({ rows: [{ total: 1 }] }) // checkIfHhIdExist
+        .mockResolvedValueOnce({
+          // getHhById
+          rows: [
+            {
+              id: 5,
+              member: "someone",
+              type: "เพิ่ม",
+              hours: 2,
+              description: "OT",
+              is_approve: false,
+            },
+          ],
+        })
+        .mockResolvedValueOnce({ rowCount: 1 }) // deleteHhById
+        .mockResolvedValueOnce({
+          // getRemainingHh
+          rows: [{ total_add: 10, total_del: 2 }],
+        });
+
+      await handleHhCommand(["hh", "ลบ", "5"], adminMetadata);
+      expect(lineClient.replyMessage).toHaveBeenCalledWith(
+        adminMetadata.replyToken,
+        expect.objectContaining({
+          type: "flex",
+          altText: expect.stringContaining("ลบ HH"),
+        }),
+      );
+    });
+
   });
 
   describe("handleReportCommand", () => {

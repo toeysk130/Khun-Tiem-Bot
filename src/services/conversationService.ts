@@ -98,7 +98,14 @@ function validateGeneratedCommand(command: string): string | null {
         return null;
       }
 
-      return `คำสั่ง hh "${subCmd}" ไม่ถูกต้อง ต้องเป็น: เพิ่ม, ใช้, approve`;
+      if (subCmd === "ลบ") {
+        if (parts.length < 3) return "hh ลบ ต้องมี ID เช่น hh ลบ 5";
+        if (isNaN(Number(parts[2])))
+          return `ID "${parts[2]}" ต้องเป็นตัวเลข`;
+        return null;
+      }
+
+      return `คำสั่ง hh "${subCmd}" ไม่ถูกต้อง ต้องเป็น: เพิ่ม, ใช้, approve, ลบ`;
     }
 
     case "ลบ": {

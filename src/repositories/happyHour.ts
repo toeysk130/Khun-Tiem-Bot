@@ -166,3 +166,27 @@ export async function getMyNotApproveHHLists(
   const { rows } = await pool.query(query, [member]);
   return rows as IHappyHour[];
 }
+
+// Get a single happy hour record by ID
+export async function getHhById(pool: Pool, id: string): Promise<IHappyHour> {
+  const query = `SELECT * FROM happy_hour WHERE id = $1`;
+  const { rows } = await pool.query(query, [id]);
+  return rows[0] as IHappyHour;
+}
+
+// Delete a happy hour record by ID
+export async function deleteHhById(pool: Pool, id: string) {
+  const query = `DELETE FROM happy_hour WHERE id = $1`;
+  await pool.query(query, [id]);
+}
+
+// Check if a happy hour ID exists and belongs to a specific member
+export async function checkIfMyHhIdExist(
+  pool: Pool,
+  member: string,
+  id: string,
+): Promise<boolean> {
+  const query = `SELECT COUNT(1) as total FROM happy_hour WHERE id = $1 AND member = $2`;
+  const { rows } = await pool.query(query, [id, member]);
+  return rows[0].total > 0;
+}

@@ -2,10 +2,11 @@ import { pool } from "../../configs/database";
 import { lineClient } from "../../configs/lineClient";
 import {
   checkIfHhIdExist,
+  checkIfMyHhIdExist,
   getNotApproveHHLists,
 } from "../../repositories/happyHour";
 import { pushFlexMessage } from "../../cron/pushMessage";
-import { addHhRecord, updateHhApproveFlag } from "../../services/hhService";
+import { addHhRecord, deleteHhRecord, updateHhApproveFlag } from "../../services/hhService";
 import { addNewHhLeaveRequest } from "../../services/leaveService";
 import { enhanceErrorWithAI } from "../../services/openaiService";
 import { UserMetaData } from "../../types/interface";
@@ -44,11 +45,17 @@ export async function handleHhCommand(
         userMetaData,
         userMetaData.replyToken,
       );
+    case "ลบ":
+      return await handleDeleteHhRecord(
+        commandArr,
+        userMetaData,
+        userMetaData.replyToken,
+      );
     default:
       await replyMessage(
         lineClient,
         userMetaData.replyToken,
-        `⛔ คำสั่ง "hh" ที่ไม่รู้จัก "${hhSubCommand}" ตัวเลือกที่สามารถใช้ได้: "เพิ่ม", "ใช้", "approve"`,
+        `⛔ คำสั่ง "hh" ที่ไม่รู้จัก "${hhSubCommand}" ตัวเลือกที่สามารถใช้ได้: "เพิ่ม", "ใช้", "approve", "ลบ"`,
       );
       return false;
   }
@@ -201,3 +208,66 @@ async function handleHhApproveRequest(
     return false;
   }
 }
+
+async function handleDeleteHhRecord(
+  commandArr: string[],
+  userMetaData: UserMetaData,
+  replyToken: string,
+): Promise<boolean> {
+  if (commandArr.length < 3) {
+    await replyMessage(
+      lineClient,
+      replyToken,
+      `⚠️ การใช้คำสั่ง "hh ลบ" ไม่ถูกต้อง ตัวอย่าง: "hh ลบ 5"`,
+    );
+    return false;
+  }
+
+  const id = commandArr[2];
+
+  if (isNaN(Number(id))) {
+    await replyMessage(
+      lineClient,
+      replyToken,
+      `⚠️ ID "${id}" ต้องเป็นตัวเลข`,
+    );
+    return false;
+  }
+
+  // Admin can delete any HH record, normal users can only delete their own
+  if (userMetaData.isAdmin) {
+    const exists = await checkIfHhIdExist(pool, id);
+    if (!exists) {
+      await replyMessage(
+        lineClient,
+        replyToken,
+        `⛔ ไม่มี ID:${id} ในระบบ Happy Hour`,
+      );
+      return false;
+    }
+  } else {
+    const exists = await checkIfMyHhIdExist(pool, userMetaData.username, id);
+    if (!exists) {
+      await replyMessage(
+        lineClient,
+        replyToken,
+        `⛔ ไม่มี ID:${id} ที่เป็นของ '${userMetaData.username}' ในระบบ Happy Hour`,
+      );
+      return false;
+    }
+  }
+
+  try {
+    await deleteHhRecord(pool, lineClient, replyToken, id);
+    return true;
+  } catch (error) {
+    console.error("Error deleting HH record:", error);
+    await replyMessage(
+      lineClient,
+      replyToken,
+      `❌ เกิดข้อผิดพลาดขณะลบ Happy Hour กรุณาลองใหม่อีกครั้งภายหลัง`,
+    );
+    return false;
+  }
+}
+

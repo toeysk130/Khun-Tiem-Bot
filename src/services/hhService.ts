@@ -1,4 +1,6 @@
 import {
+  deleteHhById,
+  getHhById,
   getNotApprvHh,
   getRemainingHh,
   insertHhRecord,
@@ -57,5 +59,34 @@ export async function updateHhApproveFlag(
   } catch (error) {
     console.error("Error updating HH approval status:", error);
     await replyMessage(client, replyToken, "❌ เกิดข้อผิดพลาดขณะอนุมัติ HH");
+  }
+}
+
+export async function deleteHhRecord(
+  pool: Pool,
+  client: Client,
+  replyToken: string,
+  id: string,
+) {
+  try {
+    const record = await getHhById(pool, id);
+    await deleteHhById(pool, id);
+
+    const remaining = await getRemainingHh(pool, record.member);
+
+    const flex = buildResultBubble("success", `ลบ HH <${id}> สำเร็จ`, [
+      { label: "👤 ชื่อ", value: record.member },
+      { label: "📝 ประเภท", value: `${record.type} ${record.hours}h` },
+      { label: "📋 เหตุผล", value: record.description || "-" },
+      { label: "❤️ HH คงเหลือ", value: `${remaining}h`, color: "#27AE60" },
+    ]);
+    await replyFlexMessage(client, replyToken, flex);
+  } catch (error) {
+    console.error("Error deleting HH record:", error);
+    await replyMessage(
+      client,
+      replyToken,
+      "❌ เกิดข้อผิดพลาดขณะลบ Happy Hour กรุณาลองใหม่",
+    );
   }
 }

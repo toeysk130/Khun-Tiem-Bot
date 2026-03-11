@@ -91,6 +91,7 @@ export async function handleShowCommands(replyToken: string) {
     cmdBlock("hh เพิ่ม (ขอ HH ใหม่)", "hh เพิ่ม 2h OT วัน launch"),
     cmdBlock("hh ใช้ (ใช้ HH แลกลา)", "hh ใช้ 4h 01FEB26 ครึ่งเช้า ธุระ"),
     cmdBlock("hh approve", "hh approve 5\nhh approve 5 6"),
+    cmdBlock("hh ลบ (ลบ HH ของฉัน)", "hh ลบ 5"),
   ]);
 
   // ─── Card 3: ดูข้อมูล ───
