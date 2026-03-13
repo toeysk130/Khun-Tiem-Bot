@@ -17,6 +17,18 @@ export function setAIMode(mode: AIMode): void {
   currentMode = mode;
 }
 
+// ── AI Chat on Leave Toggle ──
+
+let aiChatOnLeaveEnabled = false;
+
+export function getAiChatOnLeaveEnabled(): boolean {
+  return aiChatOnLeaveEnabled;
+}
+
+export function setAiChatOnLeaveEnabled(enabled: boolean): void {
+  aiChatOnLeaveEnabled = enabled;
+}
+
 const PERSONALITIES: Record<AIMode, string> = {
   สุภาพ: `บุคลิก: เป็นผู้ชาย เป็นเพื่อนสนิทที่ทำงานร่วมกัน มีความเป็นกันเอง คุยง่าย สบายๆ เหมือนคุยกับเพื่อน ใส่ emoji ใช้ภาษาไทย ห้ามใช้คำหยาบคาย
 - พูดจาแบบเพื่อนผู้ชาย (เช่น ใช้ เรา/นาย, ฉัน/แก หรือพูดห้วนๆ แบบสนิทกัน) ให้เกียรติ ไม่ลงท้ายด้วย คะ/ค่ะ/นะคะ

@@ -1,5 +1,9 @@
 import { lineClient } from "../configs/lineClient";
-import { generateAIComment } from "../services/openaiService";
+import {
+  generateAIComment,
+  getAiChatOnLeaveEnabled,
+  setAiChatOnLeaveEnabled,
+} from "../services/openaiService";
 import { UserMetaData } from "../types/interface";
 import { buildLeaveTypePickerBubble } from "../utils/flexMessage";
 import {
@@ -48,6 +52,8 @@ const QUIET_COMMANDS = [
   "เตือน",
   "โหมด",
   "แจ้งลาง่าย",
+  "เปิดแชท",
+  "ปิดแชท",
   "cron",
 ];
 
@@ -99,7 +105,8 @@ export async function commandDispatcher(
   const skipAI =
     skipAIComment ||
     AI_POWERED_COMMANDS.includes(command) ||
-    QUIET_COMMANDS.includes(command);
+    QUIET_COMMANDS.includes(command) ||
+    !getAiChatOnLeaveEnabled();
 
   // Start buffering replies so we can bundle AI comment together
   if (!skipAI) {
@@ -182,6 +189,24 @@ export async function commandDispatcher(
         wasSuccessful =
           (await handleCronCommand(commandArr, userMetadata)) !== false;
         break;
+      case "เปิดแชท": {
+        setAiChatOnLeaveEnabled(true);
+        await replyMessage(
+          lineClient,
+          userMetadata.replyToken,
+          "🤖 เปิดแชท AI แล้ว — ขุนเทียมจะพูดคุยเล่นหลังแจ้งลาทุกครั้ง",
+        );
+        break;
+      }
+      case "ปิดแชท": {
+        setAiChatOnLeaveEnabled(false);
+        await replyMessage(
+          lineClient,
+          userMetadata.replyToken,
+          "🔇 ปิดแชท AI แล้ว — ขุนเทียมจะไม่พูดคุยหลังแจ้งลา",
+        );
+        break;
+      }
       case "แจ้งลาง่าย": {
         if (userMetadata.chatType === "GROUP") {
           await replyMessage(

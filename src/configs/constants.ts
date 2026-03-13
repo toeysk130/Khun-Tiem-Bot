@@ -27,6 +27,8 @@ export const validBotCommands = [
   "โหมด",
   "ภาพรวม",
   "แจ้งลาง่าย",
+  "เปิดแชท",
+  "ปิดแชท",
 ];
 
 export const validKeyStatus = ["key", "nokey", "cer", "nocer"];
